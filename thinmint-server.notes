@@ -1,0 +1,19 @@
+
+CURL commands:
+
+curl -X POST \
+     -d '{ "query": { "accountType": "bank" }, "options": { "fields": { "accountName": 1, "accountType": 1 } } }' \
+     -H 'content-type:application/json'  \
+     http://localhost:8081/query/accounts
+
+curl -X POST \
+     -d '{ "query": { "account": "SAVINGS" }, "options": { "fields": { "account": 1, "date": 1, "amount": 1, "category": 1, "omerchant": 1, "isDebit": 1 } } }' \
+     -H 'content-type:application/json'  \
+     http://localhost:8081/query/transactions
+
+curl -X POST \
+     -d '{ "query": { "$or": [ { "hasBeenAcked": { "$exists": false } }, { "hasBeenAcked" : false } ] }, "options": { "fields": { "account": 1, "date": 1, "amount": 1, "category": 1, "omerchant": 1, "isDebit": 1 } } }' \
+     -H 'content-type:application/json'  \
+     http://localhost:8081/query/transactions
+
+

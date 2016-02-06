@@ -1,0 +1,11 @@
+{
+  "name": "thinmint-server",
+  "version": "0.1.0",
+  "author": "rob4lderman",
+  "dependencies": {
+    "express": "~4.13.4",
+    "body-parser": "~1.14.2",
+    "mongodb": "~2.1.4",
+    "monk": "~1.0.1"
+  }
+}

@@ -1,0 +1,43 @@
+<!DOCTYPE html/>
+<html ng-app="MyApp">
+
+<head>
+    <!-- Note: load JS after html to improve rendering time -->
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore.js"></script>
+
+    <!-- load app module _after_ angular (otherwise you'll get 'angular not defined') -->
+    <script src="js/my-app.js"/></script>
+
+    <!-- bootstrap -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+</head>
+
+<body>
+     <div class="container" ng-controller="MainController">
+
+         <h3>New Transactions</h3>
+         <table class="table table-condensed table-hover">
+             <tr ng-repeat="tran in newTrans" >
+                 <td><button ng-click="ackNewTran(tran._id)">ack</button></td>
+                 <td ng-bind="tran.date"></td>
+                 <td ng-bind="tran.amount"></td>
+                 <td>{{tran.fi}} - {{tran.account}}</td>
+                 <td ng-bind="tran.omerchant"></td>
+                 <td> {{ (tran.isPending) ? "(pending)" : "" }} </td>
+             </tr>
+         </table>
+
+         <h3>Accounts</h3>
+         <table class="table table-condensed table-hover">
+             <tr ng-repeat="account in accounts" >
+                 <td ng-bind="account.currentBalance"></td>
+                 <td>{{account.fiName}} - {{account.accountName}}</td>
+                 <!-- TODO: add lastrefreshed time -->
+             </tr>
+         </table>
+
+     </div>
+</body>
+</html>
+
