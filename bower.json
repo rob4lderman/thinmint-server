@@ -1,0 +1,6 @@
+{
+  "name": "thinmint-server",
+  "dependencies": {
+    "angular-elastic-input": "~2.2.0"
+  }
+}

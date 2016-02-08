@@ -1,4 +1,4 @@
-angular.module( "MyApp", [] )
+angular.module( "MyApp",  ['puElasticInput'] )
 
 .controller( "MainController",   ["$scope", "$http", "_",
                          function( $scope,   $http,   _ ) {
@@ -55,6 +55,7 @@ angular.module( "MyApp", [] )
 
     };
 
+
     /**
      * Export to $scope
      */
@@ -66,6 +67,77 @@ angular.module( "MyApp", [] )
     fetchNewTrans();
 
 }])
+
+
+/**
+ * TODO
+ */
+.controller( "TagFormController",   ["$scope", "$http", "_",
+                            function( $scope,   $http,   _ ) {
+
+    console.log("TagFormController: alive!: $scope.tran=" + $scope.tran.amount);
+
+    /**
+     * Called whenever the tag input field changes
+     */
+    var onTagInputChange = function() {
+        console.log("TagFormController.onTagInputChange: " + $scope.tagString);
+    };
+
+    /**
+     * TODO
+     */
+    var isEmpty = function(s) {
+        return angular.isUndefined(s) || !s || s.trim().length == 0;
+    }
+
+    /**
+     * PUT the tag updates to the db.
+     */
+    var putTranTags = function() {
+        console.log("TagFormController.putTranTags: " + JSON.stringify($scope.tran.tags));
+        var putData = { "tags": $scope.tran.tags } ;
+        $http.put( "/transactions/" + $scope.tran._id, putData )
+             .then( function success(response) {
+                 console.log( "TagFormController.putTranTags: response=" + JSON.stringify(response,null,2));
+             }, function error(response) {
+                 alert("PUT /transactions/" + $scope.tran._id + ": response=" + JSON.stringify(response)); // TODO: dev
+             } );
+    };
+
+    /**
+     * add a tag to the tran
+     */
+    var addTranTag = function(tag) {
+
+        if (isEmpty(tag)) {
+            return;
+        }
+
+        // Create tags field if it doesn't exist
+        $scope.tran.tags = $scope.tran.tags || [];  
+
+        if ( ! _.contains($scope.tran.tags, tag) ) {
+            $scope.tran.tags.push(tag);
+            putTranTags();
+        }
+    }
+
+    /**
+     * TODO
+     */
+    var onFormSubmit = function() {
+        console.log("TagFormController.onFormSubmit: " + $scope.tagString);
+        addTranTag( $scope.tagString )
+        $scope.tagString = "";
+    }
+
+    $scope.onTagInputChange = onTagInputChange;
+    $scope.onFormSubmit = onFormSubmit;
+
+}])
+
+
 
 /**
  * underscore.js support.

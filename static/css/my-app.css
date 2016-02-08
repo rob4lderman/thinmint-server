@@ -1,0 +1,66 @@
+
+
+.form-tag {
+    display: inline-block;
+}
+
+.div-tags {
+    font-size: smaller;
+}
+
+.div-tags form {
+    margin-bottom: 0px;
+}
+
+
+.div-tags input {
+    border: none;
+    box-shadow: none;
+    display: inline;
+    line-height: inherit;
+}
+
+.div-ack {
+    text-align: center;
+}
+
+form.div-ack {
+    margin-bottom: 0px;
+}
+
+.div-ack button {
+    padding: 1px 4px;   
+    line-height: inherit;
+}
+
+
+.list-new-trans {
+    font-size: 16px;
+}
+
+.list-new-trans li {
+    border-top: solid 1px #ccc;
+    padding: 4px 0 16px;
+}
+
+.list-new-trans span {
+    padding: 2px;
+}
+
+.new-tran-date {
+    font-size: large;
+}
+
+.new-tran-amount {
+    font-size: large;
+}
+
+.list-new-trans .span-tag {
+    background-color: #9b9;
+    color: white;
+    padding: 1px 4px;
+    margin: 1px;
+    border-radius: 4px;
+}
+
+

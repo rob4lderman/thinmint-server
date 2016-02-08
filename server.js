@@ -120,9 +120,21 @@ app.put('/transactions/:id', function (req, res) {
                       { "$set": req.body },
                       { "upsert": false },
                       function(e,doc){
-        console.log("PUT /transactions/" + req.params.id + ": RESPONSE:\n" + JSON.stringify(docs))
+        console.log("PUT /transactions/" + req.params.id + ": RESPONSE:\n" + JSON.stringify(doc))
         res.json(doc);
     });
+
+    // Also update the tags collection
+    var tagsCollection = req.db.get('tags');
+    tagsCollection.id = function (str) { return str; };  // http://stackoverflow.com/questions/25889863/play-with-meteor-mongoid-in-monk
+
+    tagsCollection.update({ '_id': 1 }, 
+                          { '$addToSet': { 'tags': { '$each': (req.body.tags || []) } } } ,
+                          { "upsert": true },
+                      function(e,doc){
+        console.log("UPDATE /tags " + JSON.stringify(req.body.tags || []) + ": COMPLETE"))
+    });
+
 })
 
 
