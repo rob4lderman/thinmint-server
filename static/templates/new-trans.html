@@ -25,7 +25,7 @@
                             <input type="text" 
                                    class="input-tag form-control input-sm" 
                                    pu-elastic-input 
-                                   style="min-width: 60px; max-width: 100px;"
+                                   style="min-width: 60px; max-width: 150px;"
                                    ng-model="tagString" 
                                    ng-change="onTagInputChange()"
                                    placeholder="+ tag" />
@@ -36,34 +36,4 @@
         </div>
     </li>
 </ul>
-
-<!-- 
-        <div class="div-tags">
-            <span ng-repeat="tag in tran.tags" class="span-tag">{{tag}}</span>
-            <form class="form-tag" ng-submit="onFormSubmit()" ng-controller="TagFormController">
-                <span> 
-                    <input type="text" 
-                           class="input-tag form-control input-sm" 
-                           pu-elastic-input 
-                           style="min-width: 40px; max-width: 100px;"
-                           ng-model="tagString" 
-                           ng-change="onTagInputChange()"
-                           placeholder="+ tag" />
-                </span>
-            </form>
-            <form class="form-tag">
-                <span>
-                    <button class="btn btn-primary btn-sm" ng-click="ackNewTran(tran._id)">ack</button>
-                </span>
-            </form>
-        </div>
-
-        <div>
-            <span class="new-tran-date" ng-bind="tran.date"></span>
-            <span class="new-tran-amount" ng-bind="tran.amount"></span>
-            <span class="new-tran-account">{{tran.fi}} - {{tran.account}}</span>
-            <span class="new-tran-merchant" ng-bind="tran.omerchant"></span>
-            <span> {{ (tran.isPending) ? "(pending)" : "" }} </span>
-        </div>
-        -->
 

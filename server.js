@@ -132,7 +132,7 @@ app.put('/transactions/:id', function (req, res) {
                           { '$addToSet': { 'tags': { '$each': (req.body.tags || []) } } } ,
                           { "upsert": true },
                       function(e,doc){
-        console.log("UPDATE /tags " + JSON.stringify(req.body.tags || []) + ": COMPLETE"))
+        console.log("UPDATE /tags " + JSON.stringify(req.body.tags || []) + ": COMPLETE");
     });
 
 })

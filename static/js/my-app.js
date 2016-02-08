@@ -23,6 +23,19 @@ angular.module( "MyApp",  ['puElasticInput'] )
              } );
     };
 
+    /**
+     * @return formatted date string
+     */
+    var formatEpochAsDate = function( timestamp ) {
+        var date = new Date(timestamp);
+        var mon = date.getMonth() + 1;
+        var day = date.getDate();
+        var year = date.getYear() % 100;
+        var hours = date.getHours();
+        var minutes = "0" + date.getMinutes();
+        var seconds = "0" + date.getSeconds();
+        return mon + "/" + day + "/" + year + " " + hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+    };
 
     /**
      * fetch accounts from db and put them in $scope.accounts
@@ -38,21 +51,46 @@ angular.module( "MyApp",  ['puElasticInput'] )
                  // resposne.config – {Object} – The configuration object that was used to generate the request.
                  // response.statusText – {string} – HTTP status text of the response.
                  console.log( "fetchAccounts: response=" + JSON.stringify(response,null,2));
-                 $scope.accounts = response.data;
+                 $scope.accounts = response.data ;
              }, function error(response) {
                  alert("GET /accounts: response=" + JSON.stringify(response)); // TODO: dev
              } );
     };
 
-
-    /**
+    /*
      * TODO
      */
     var ackNewTran = function(tranId) {
 
-        console.log("ackNewTran: " + tranId);
+        console.log("MainController.ackNewTran: " + tranId);
+
+        // remove it from the list locally (faster)
         $scope.newTrans = _.filter( $scope.newTrans, function(tran) { return tran._id != tranId } );
 
+        // update the db.
+        var putData = { "hasBeenAcked": true } ;
+        $http.put( "/transactions/" + tranId, putData )
+             .then( function success(response) {
+                 console.log( "MainController.ackNewTran: response=" + JSON.stringify(response,null,2));
+             }, function error(response) {
+                 alert("PUT /transactions/" + tranId + ": response=" + JSON.stringify(response)); // TODO: dev
+             } );
+
+    };
+
+
+    /**
+     * PUT the tag updates to the db.
+     */
+    var putTranTags = function() {
+        console.log("TagFormController.putTranTags: " + JSON.stringify($scope.tran.tags));
+        var putData = { "tags": $scope.tran.tags } ;
+        $http.put( "/transactions/" + $scope.tran._id, putData )
+             .then( function success(response) {
+                 console.log( "TagFormController.putTranTags: response=" + JSON.stringify(response,null,2));
+             }, function error(response) {
+                 alert("PUT /transactions/" + $scope.tran._id + ": response=" + JSON.stringify(response)); // TODO: dev
+             } );
     };
 
 
@@ -62,6 +100,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
     $scope.accounts = [];
     $scope.newTrans = [];
     $scope.ackNewTran = ackNewTran;
+    $scope.formatEpochAsDate = formatEpochAsDate;
 
     fetchAccounts();
     fetchNewTrans();

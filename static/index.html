@@ -21,44 +21,13 @@
          <h3>New Transactions</h3>
          <div ng-include="'templates/new-trans.html'">
          </div>
-         <!-- ul class="list-unstyled">
-            <li ng-repeat="tran in newTrans" >
-                <div>
-                    <div>
-                        <span ng-bind="tran.date"></span>
-                        <span ng-bind="tran.amount"></span>
-                        <span>{{tran.fi}} - {{tran.account}}</span>
-                        <span ng-bind="tran.omerchant"></span>
-                        <span> {{ (tran.isPending) ? "(pending)" : "" }} </span>
-                    </div>
-                    <div>
-                        <span ng-repeat="tag in tran.tags" class="span-tag">{{tag}}</span>
-                        <form class="form-tag" ng-submit="onFormSubmit()" ng-controller="TagFormController">
-                            <span> 
-                                <input type="text" 
-                                       class="input-tag form-control input-sm" 
-                                       pu-elastic-input 
-                                       style="min-width: 60px; max-width: 100px;"
-                                       ng-model="tagString" 
-                                       ng-change="onTagInputChange()"
-                                       placeholder="+ tag" />
-                            </span>
-                        </form>
-                        <form class="form-tag">
-                            <span>
-                                <button class="btn btn-primary btn-sm" ng-click="ackNewTran(tran._id)">ack</button>
-                            </span>
-                        </form>
-                    </div>
-                </div>
-             </li>
-         </ul -->
 
          <h3>Accounts</h3>
          <table class="table table-condensed table-hover">
              <tr ng-repeat="account in accounts" >
                  <td ng-bind="account.currentBalance"></td>
                  <td>{{account.fiName}} - {{account.accountName}}</td>
+                 <td>{{ formatEpochAsDate(account.lastUpdated) }}</td>
                  <!-- TODO: add lastrefreshed time -->
              </tr>
          </table>
