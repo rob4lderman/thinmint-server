@@ -4,7 +4,7 @@
             <div class="col-md-2">
                 <div>
                     <span class="new-tran-date" ng-bind="tran.date"></span>
-                    <span class="new-tran-amount" ng-bind="tran.amount"></span>
+                    <span class="new-tran-amount" tm-is-debit="{{tran.isDebit}}" ng-bind="tran.amount"></span>
                 </div>
                 <form class="div-tags div-ack">
                     <span>
@@ -14,22 +14,39 @@
             </div>
             <div class="col-md-10">
                 <div>
-                    <span class="new-tran-account">{{tran.fi}} - {{tran.account}}</span>
-                    <span class="new-tran-merchant" ng-bind="tran.omerchant"></span>
-                    <span> {{ (tran.isPending) ? "(pending)" : "" }} </span>
+                    <span class="new-tran-merchant" ng-bind="tran.merchant"></span>
+                    <!-- TODO: lookup account "nickname" -->
+                    <span class="new-tran-account">[{{tran.fi}} - {{tran.account}}]</span>
+                    <span class="new-tran-ispending">{{ (tran.isPending) ? "(pending)" : "" }}</span>
                 </div>
-                <div class="div-tags">
-                    <span ng-repeat="tag in tran.tags" class="span-tag">{{tag}}</span>
-                    <form class="form-tag" ng-submit="onFormSubmit()" ng-controller="TagFormController">
+                <div class="div-tags" ng-controller="TagFormController">
+                    <form class="form-tag" ng-submit="onFormSubmit()" >
                         <span> 
+                            <!-- TODO: pu-elastic-input isn't working quite right. doesn't seem to know the font size -->
                             <input type="text" 
+                                   id="input-tag-{{tran._id}}"
                                    class="input-tag form-control input-sm" 
                                    pu-elastic-input 
                                    style="min-width: 60px; max-width: 150px;"
-                                   ng-model="tagString" 
-                                   ng-change="onTagInputChange()"
+                                   ng-model="inputTag" 
+                                   ng-change="onChangeInputTag()"
                                    placeholder="+ tag" />
                         </span>
+                    </form>
+                    <span ng-repeat="tag in tran.tags" class="span-tag">
+                        {{tag}}
+                        <!-- TODO: could make this a button instead (we're not inside a form) -->
+                        <a class="span-tag-x" href="" ng-click="removeTag(tag)">x</a>
+                    </span>
+                    <!-- TODO: this won't handle wrapping very well -->
+                    <br />
+                    <form class="form-tag">
+                        <ul class="list-unstyled">
+                            <li class="filtered-tag" ng-repeat="filteredTag in filteredTags">
+                                <!-- TODO: passing filteredTag as a parm since it doesn't appear to be attached to the $scope -->
+                                <button class="btn btn-sm" ng-click="onClickFilteredTag(filteredTag)">{{filteredTag}}</button>
+                            </li>
+                        </ul>
                     </form>
                 </div>
             </div>

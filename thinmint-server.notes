@@ -1,4 +1,38 @@
 
+TODO: tran query page (filter by account, by tag, by merchant?, by amount range?)
+TODO: javascript charts!!!
+
+
+done: match up pending trans with completed trans  (cross ref via linkedTranIds field)
+      note: looks like mint will do that for you 
+            mint deletes isPending trans once they're matched up
+            should i also delete pending trans once they've been matched?
+            basically every tran that i have but mint doesn't is probably an isPending that's been removed.
+            i.e. all my isPending=true trans will eventually be deleted by mint
+            check those trans against the new ones to find a match
+            transfer tags from pending tran to completed tran 
+            mark pendingTran hasBeenAcked=true, isResolved=true, linkedTranIds
+
+                  
+TODO: match up transfers (e.g. CC payments with CHECKING account checks, SAVINGS -> CHECKINGS)  transferTranId=[xx] ?
+      abs(tran1.amount) == abs(tran2.amount) && tran1.date == tran2.date
+      tran1.isTransfer==true && tran2.isTransfer==true
+      mint already marks the isTransfer field.
+
+TODO: account "nickname" - display in trans
+TODO: account balance change-since-last-checked (use accountsTimeSeries)
+
+TODO: account balance including pending (non-completed) trans
+
+TODO: auto-tagging
+        match tags by omerchant
+        "income" for all credits (that are NOT transfers)
+        
+TODO: all investments trans have txnType=1, everything else txnType=0
+      technically this is "income" too... 
+
+
+===================================================================================================
 CURL commands:
 
 curl -X POST \

@@ -55,6 +55,28 @@ form.div-ack {
     font-size: large;
 }
 
+[tm-is-debit=true] {
+    color: inherit;
+}
+
+[tm-is-debit=false] {
+    color: #0b0
+}
+
+[tm-account-type=credit] {
+    color: #b00;
+}
+
+.tm-account-list [tm-is-debit=true] {
+    color: #b00;
+}
+
+
+tr.tm-account-list-total {
+    border-top: solid 2px black;
+}
+
+
 .list-new-trans .span-tag {
     background-color: #9b9;
     color: white;
@@ -62,5 +84,21 @@ form.div-ack {
     margin: 1px;
     border-radius: 4px;
 }
+
+.list-new-trans .span-tag .span-tag-x {
+    display: none;
+    color: inherit;
+}
+
+.list-new-trans .span-tag:hover .span-tag-x {
+    display: inline;
+}
+
+
+li.filtered-tag {
+    padding: 0px;
+    border:none;
+}
+
 
 

@@ -13,7 +13,9 @@ angular.module( "MyApp",  ['puElasticInput'] )
      */
     var fetchNewTrans = function() {
 
-        var postData = { "query": { "$or": [ { "hasBeenAcked": { "$exists": false } }, { "hasBeenAcked" : false } ] } };
+        var postData = { "query": { "$or": [ { "hasBeenAcked": { "$exists": false } }, { "hasBeenAcked" : false } ] },
+                         "options": { "sort": { "timestamp": -1 } } 
+                       };
         $http.post( "/query/transactions", postData )
              .then( function success(response) {
                  console.log( "fetchNewTrans: response=" + JSON.stringify(response,null,2));
@@ -28,13 +30,13 @@ angular.module( "MyApp",  ['puElasticInput'] )
      */
     var formatEpochAsDate = function( timestamp ) {
         var date = new Date(timestamp);
-        var mon = date.getMonth() + 1;
-        var day = date.getDate();
+        var mon = "0" + (date.getMonth() + 1);
+        var day = "0" + (date.getDate());
         var year = date.getYear() % 100;
-        var hours = date.getHours();
-        var minutes = "0" + date.getMinutes();
-        var seconds = "0" + date.getSeconds();
-        return mon + "/" + day + "/" + year + " " + hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+        // var hours = date.getHours();
+        // var minutes = "0" + date.getMinutes();
+        // var seconds = "0" + date.getSeconds();
+        return mon.substr(-2) + "/" + day.substr(-2) + "/" + year ; // + " " + hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
     };
 
     /**
@@ -57,8 +59,25 @@ angular.module( "MyApp",  ['puElasticInput'] )
              } );
     };
 
-    /*
-     * TODO
+    /**
+     * fetch accounts with isActive=true from db and put them in $scope.accounts
+     *
+     * @sideeffect $scope.accounts - populated from db
+     */
+    var fetchActiveAccounts = function() {
+        var postData = { "query": { "isActive": true } };
+
+        $http.post( "/query/accounts", postData )
+             .then( function success(response) {
+                 console.log( "MainController.fetchActiveAccounts: response=" + JSON.stringify(response,null,2));
+                 $scope.accounts = response.data;
+             }, function error(response) {
+                 alert("POST /query/accounts: response=" + JSON.stringify(response)); // TODO: dev
+             } );
+    };
+
+    /**
+     * Set hasBeenAcked=true for the given tran in the db.
      */
     var ackNewTran = function(tranId) {
 
@@ -75,24 +94,65 @@ angular.module( "MyApp",  ['puElasticInput'] )
              }, function error(response) {
                  alert("PUT /transactions/" + tranId + ": response=" + JSON.stringify(response)); // TODO: dev
              } );
-
     };
+
+    // -rx- /**
+    // -rx-  * PUT the tag updates to the db.
+    // -rx-  */
+    // -rx- var putTranTags = function() {
+    // -rx-     console.log("TagFormController.putTranTags: " + JSON.stringify($scope.tran.tags));
+    // -rx-     var putData = { "tags": $scope.tran.tags } ;
+    // -rx-     $http.put( "/transactions/" + $scope.tran._id, putData )
+    // -rx-          .then( function success(response) {
+    // -rx-              console.log( "TagFormController.putTranTags: response=" + JSON.stringify(response,null,2));
+    // -rx-          }, function error(response) {
+    // -rx-              alert("PUT /transactions/" + $scope.tran._id + ": response=" + JSON.stringify(response)); // TODO: dev
+    // -rx-          } );
+    // -rx- };
 
 
     /**
-     * PUT the tag updates to the db.
+     * Fetch the list of tags from the db.
      */
-    var putTranTags = function() {
-        console.log("TagFormController.putTranTags: " + JSON.stringify($scope.tran.tags));
-        var putData = { "tags": $scope.tran.tags } ;
-        $http.put( "/transactions/" + $scope.tran._id, putData )
+    var fetchTags = function() {
+        $http.get( "/tags" )
              .then( function success(response) {
-                 console.log( "TagFormController.putTranTags: response=" + JSON.stringify(response,null,2));
+                 // response.data – {string|Object} – The response body transformed with the transform functions.
+                 // response.status – {number} – HTTP status code of the response.
+                 // response.headers – {function([headerName])} – Header getter function.
+                 // resposne.config – {Object} – The configuration object that was used to generate the request.
+                 // response.statusText – {string} – HTTP status text of the response.
+                 console.log( "MainController.fetchTags: response=" + JSON.stringify(response,null,2));
+                 $scope.tags = response.data ;
              }, function error(response) {
-                 alert("PUT /transactions/" + $scope.tran._id + ": response=" + JSON.stringify(response)); // TODO: dev
+                 alert("GET /tags: response=" + JSON.stringify(response)); // TODO: dev
              } );
     };
 
+    /**
+     * Listens for $addTranTag events.
+     */
+    var onAddTranTag = function(theEvent, tag) {
+        console.log("MainController.onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
+
+        if ( ! _.contains($scope.tags, tag) ) {
+            $scope.tags.push(tag);
+        }
+    };
+
+    /**
+     * @return net worth (sum of value for all $scope.accounts)
+     */
+    var getNetWorth = function() {
+        var retMe = _.reduce($scope.accounts, 
+                             function(memo, account) { 
+                                 return memo + account.value;
+                             }, 
+                             0);
+        console.log("MainController.getNetWorth: " + retMe);
+        return retMe;
+    };
+        
 
     /**
      * Export to $scope
@@ -101,30 +161,44 @@ angular.module( "MyApp",  ['puElasticInput'] )
     $scope.newTrans = [];
     $scope.ackNewTran = ackNewTran;
     $scope.formatEpochAsDate = formatEpochAsDate;
+    $scope.getNetWorth = getNetWorth;
 
-    fetchAccounts();
+    $scope.$on("$addTranTag", onAddTranTag );
+
+    /**
+     * Init data
+     */
+    fetchActiveAccounts();
     fetchNewTrans();
+    fetchTags();
 
 }])
 
 
 /**
- * TODO
+ * ng-controller for tran tagging <form>(s).
+ * There's one of these controllers for each tran ($scope.tran).
  */
-.controller( "TagFormController",   ["$scope", "$http", "_",
-                            function( $scope,   $http,   _ ) {
+.controller( "TagFormController",   ["$scope", "$http", "_", "$rootScope",
+                            function( $scope,   $http,   _ ,  $rootScope) {
 
     console.log("TagFormController: alive!: $scope.tran=" + $scope.tran.amount);
 
     /**
      * Called whenever the tag input field changes
      */
-    var onTagInputChange = function() {
-        console.log("TagFormController.onTagInputChange: " + $scope.tagString);
+    var onChangeInputTag = function() {
+        if ( $scope.inputTag.length >= 2 ) {
+            // Filter for auto-complete list
+            $scope.filteredTags = _.filter( $scope.tags, function(tag) { return tag.startsWith( $scope.inputTag ); } );
+            console.log("TagFormController.onChangeInputTag: " + $scope.inputTag + "; filteredTags=" + JSON.stringify($scope.filteredTags) );
+        } else {
+            $scope.filteredTags = [];
+        }
     };
 
     /**
-     * TODO
+     * @return true if the given string is null or empty
      */
     var isEmpty = function(s) {
         return angular.isUndefined(s) || !s || s.trim().length == 0;
@@ -149,6 +223,10 @@ angular.module( "MyApp",  ['puElasticInput'] )
      */
     var addTranTag = function(tag) {
 
+        // Clear the auto-complete list and the input field.
+        $scope.filteredTags = [];   
+        $scope.inputTag = "";
+
         if (isEmpty(tag)) {
             return;
         }
@@ -159,20 +237,61 @@ angular.module( "MyApp",  ['puElasticInput'] )
         if ( ! _.contains($scope.tran.tags, tag) ) {
             $scope.tran.tags.push(tag);
             putTranTags();
+
+            // Refresh parent $scope.tags since we may have just added a brand new tag.
+            // Safest way to do this is to via Event.
+            console.log("TagFormController.addTranTag: $rootScope.$broadcast(event=$addTranTag, tag=" + tag + ")");
+            $rootScope.$broadcast("$addTranTag", tag);
         }
     }
 
     /**
-     * TODO
+     * Called when the user hits 'enter' after typing in a tag.
+     * Add the tag to the tran.
      */
     var onFormSubmit = function() {
-        console.log("TagFormController.onFormSubmit: " + $scope.tagString);
-        addTranTag( $scope.tagString )
-        $scope.tagString = "";
+        console.log("TagFormController.onFormSubmit: " + $scope.inputTag);
+        addTranTag( $scope.inputTag )
     }
 
-    $scope.onTagInputChange = onTagInputChange;
+    /**
+     * Called when a filteredTag from the auto-complete list is clicked.
+     */
+    var onClickFilteredTag = function(filteredTag) {
+        console.log("TagFormController.onClickFilteredTag: " + filteredTag );
+        addTranTag(filteredTag);
+        
+        // TODO: should use angular directive?
+        var inputElem = angular.element( document.querySelector("#input-tag-" + $scope.tran._id) );
+        console.log("TagFormController.onClickFilteredTag: inputElem=" + inputElem);
+        inputElem[0].focus();
+    }
+
+    /**
+     * Remove the tag from the tran.
+     */
+    var removeTag = function(tag) {
+
+        // remove it from the tags list 
+        $scope.tran.tags = _.filter( $scope.tran.tags, function(t) { return t != tag; } );
+        console.log("TagFormController.removeTag: " + tag + ", $scope.tran.tags=" + JSON.stringify($scope.tran.tags) );
+
+        // Update the db
+        putTranTags();
+    };
+
+    /**
+     * Export to scope.
+     */
+    $scope.onChangeInputTag = onChangeInputTag;
     $scope.onFormSubmit = onFormSubmit;
+    $scope.onClickFilteredTag = onClickFilteredTag;
+    $scope.removeTag = removeTag;
+
+    /**
+     * Init data.
+     */
+    $scope.filteredTags = [];
 
 }])
 

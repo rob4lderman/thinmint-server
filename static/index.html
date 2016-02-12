@@ -22,13 +22,26 @@
          <div ng-include="'templates/new-trans.html'">
          </div>
 
-         <h3>Accounts</h3>
+         <h3>Active Accounts</h3>
          <table class="table table-condensed table-hover">
-             <tr ng-repeat="account in accounts" >
-                 <td ng-bind="account.currentBalance"></td>
+             <tr>
+                 <th>Balance</th>
+                 <th>Account</th>
+                 <th colspan="2">Last Updated</th>
+             </tr>
+             <tr class="tm-account-list" ng-repeat="account in accounts" >
+                 <td tm-is-debit='{{ (account.accountType == "credit") }}' 
+                     tm-account-type="{{account.accountType}}" 
+                     ng-bind="account.currentBalance | currency"></td>
                  <td>{{account.fiName}} - {{account.accountName}}</td>
-                 <td>{{ formatEpochAsDate(account.lastUpdated) }}</td>
-                 <!-- TODO: add lastrefreshed time -->
+                 <td>{{ formatEpochAsDate(account.fiLastUpdated) }}</td>
+                 <td>({{ account.lastUpdatedInString }} ago)</td>
+             </tr>
+             <tr class="tm-account-list-total">
+                 <th>{{ getNetWorth() | currency }}</th>
+                 <th>Net worth</th>
+                 <th></th>
+                 <th></th>
              </tr>
          </table>
 

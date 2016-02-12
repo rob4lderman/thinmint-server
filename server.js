@@ -50,6 +50,19 @@ app.get('/accounts', function (req, res) {
 
 /**
  * REST API
+ * @return all tags.
+ */
+app.get('/tags', function (req, res) {
+    var collection = req.db.get('tags');
+    collection.find({},{},function(e,docs){
+        // There's a single doc in the tags collection, with a single array field named 'tags'.
+        res.json(docs[0].tags);
+    });
+})
+
+
+/**
+ * REST API
  * @return the account with the given id
  */
 app.get('/accounts/:id', function (req, res) {
@@ -172,8 +185,8 @@ app.post('/query/transactions', function (req, res) {
     var collection = req.db.get('transactions');
     console.log("POST transactions/query: REQUEST: " + JSON.stringify(req.body))
     collection.find( req.body.query || {}, 
-                       req.body.options || {},
-                       function(e,docs){
+                     req.body.options || {},
+                     function(e,docs){
         console.log("POST transactions/query: RESPONSE:\n" + JSON.stringify(docs))
         res.json(docs);
     });
