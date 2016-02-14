@@ -1,0 +1,48 @@
+<table class="table table-condensed ">
+    <tr>
+        <th></th>
+        <th>Date</th>
+        <th>Amount</th>
+        <th></th>
+        <th>Merchant</th> 
+        <th>Account</th> 
+    </tr>
+    <tr ng-repeat-start="tran in newTrans" >
+        <td>
+            <form class="div-tags div-ack">
+                <button class="btn btn-info btn-sm" ng-click="ackNewTran(tran._id)">ack</button>
+            </form>
+        </td>
+        <td ng-bind="tran.date"></td>
+        <td tm-is-debit="{{tran.isDebit || tran.isTransfer}}" tm-is-transfer="{{tran.isTransfer}}" ng-bind="tran.amount"></td>
+        <td class="new-tran-ispending">{{ (tran.isPending) ? "(pending)" : "" }}</td>
+        <td ng-bind="tran.merchant"></td>
+        <td><span class="new-tran-account">{{tran.fi}} - {{tran.account}}</span></td>
+    </tr>
+    <tr class="div-tags" ng-controller="TagFormController" ng-repeat-end>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>
+            <form class="form-tag" ng-submit="onFormSubmit()" >
+                <input type="text" 
+                       id="input-tag-{{tran._id}}"
+                       class="input-tag form-control input-sm" 
+                       pu-elastic-input 
+                       style="min-width: 60px; max-width: 150px;"
+                       ng-model="inputTag" 
+                       tm-auto-fill="tags"
+                       placeholder="+ tag"
+                       autocomplete="off" />
+            </form>
+        </td>
+        <td class="tm-tag-list" colspan="2">
+            <span ng-repeat="tag in tran.tags" class="span-tag">
+                {{tag}}
+                <a class="span-tag-x" href="" ng-click="removeTag(tag)">x</a>
+            </span>
+        </td>
+    </tr>
+</table>
+
+

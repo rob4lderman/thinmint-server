@@ -8,6 +8,10 @@
     font-size: smaller;
 }
 
+.div-tags td { 
+     border-top: none !important; 
+ }
+
 .div-tags form {
     margin-bottom: 0px;
 }
@@ -17,7 +21,17 @@
     border: none;
     box-shadow: none;
     display: inline;
-    line-height: inherit;
+    height: 20px;
+}
+
+tr.div-tags td.tm-tag-list {
+    /* to align it with the .div-tags <input> */
+    line-height: 20px;
+}
+
+tr.div-tags td {
+    padding-top: 0px !important;
+    padding-bottom: 10px !important;
 }
 
 .div-ack {
@@ -55,6 +69,15 @@ form.div-ack {
     font-size: large;
 }
 
+tr td.new-tran-ispending {
+    font-size: small;
+    vertical-align: middle !important;
+}
+
+[tm-is-debit] {
+    white-space: nowrap;
+}
+
 [tm-is-debit=true] {
     color: inherit;
 }
@@ -63,8 +86,20 @@ form.div-ack {
     color: #0b0
 }
 
+[tm-is-transfer=true] {
+    color: #00b;
+}
+
+
 [tm-account-type=credit] {
     color: #b00;
+}
+
+.tm-account-list, .tm-tran-list {
+    border: solid 1px #ddd;
+    padding: 0 10px;
+    border-radius: 5px;
+    margin-top: 40px;
 }
 
 .tm-account-list [tm-is-debit=true] {
@@ -77,22 +112,30 @@ tr.tm-account-list-total {
 }
 
 
-.list-new-trans .span-tag {
+span.span-tag {
     background-color: #9b9;
     color: white;
     padding: 1px 4px;
     margin: 1px;
     border-radius: 4px;
+    /* white-space: nowrap; */
 }
 
-.list-new-trans .span-tag .span-tag-x {
-    display: none;
-    color: inherit;
+.span-tag .span-tag-x {
+    color: #44b;
 }
 
-.list-new-trans .span-tag:hover .span-tag-x {
+.span-tag .span-tag-x:hover {
+    font-weight: bold;
+    text-decoration: none
+}
+
+
+/*
+.span-tag:hover .span-tag-x {
     display: inline;
 }
+*/
 
 
 li.filtered-tag {

@@ -46,7 +46,7 @@ app.get('/accounts', function (req, res) {
     collection.find({},{},function(e,docs){
         res.json(docs);
     });
-})
+});
 
 /**
  * REST API
@@ -58,7 +58,7 @@ app.get('/tags', function (req, res) {
         // There's a single doc in the tags collection, with a single array field named 'tags'.
         res.json(docs[0].tags);
     });
-})
+});
 
 
 /**
@@ -71,11 +71,84 @@ app.get('/accounts/:id', function (req, res) {
 
     collection.id = function (id) { return id; };  // http://stackoverflow.com/questions/25889863/play-with-meteor-mongoid-in-monk
 
-    collection.find({ "_id": parseInt(req.params.id) },{},function(e,docs){
-        console.log("GET /accounts/" + req.params.id + ": RESPONSE: " + JSON.stringify(docs));
+    collection.findOne({ "_id": parseInt(req.params.id) },
+                       {},
+                       function(e,doc){
+        console.log("GET /accounts/" + req.params.id + ": RESPONSE: " + JSON.stringify(doc));
+        res.json(doc);
+    });
+});
+
+
+/**
+ * REST API
+ * @return the time series data for the given account 
+ */
+app.get('/accounts/:id/timeseries', function (req, res) {
+    console.log("GET /accounts/" + req.params.id + "/timeseries");
+
+    var collection = req.db.get('accountsTimeSeries');
+    collection.id = function (id) { return id; };  // http://stackoverflow.com/questions/25889863/play-with-meteor-mongoid-in-monk
+
+    collection.find({ "accountId": parseInt(req.params.id) },
+                    { "sort": { "timestamp": 1 } },
+                    function(e,docs){
+        console.log("GET /accounts/" + req.params.id + "/timeseries: RESPONSE: " + JSON.stringify(docs));
         res.json(docs);
     });
-})
+});
+
+
+
+/**
+ * TODO
+ */
+var fetchById = function( collection, id, callback ) {
+    console.log("fetchById: collection=TODO, id=" + id);
+    collection.id = function (id) { return id; };  // http://stackoverflow.com/questions/25889863/play-with-meteor-mongoid-in-monk
+    collection.findOne({ "_id": id }, {}, callback );
+};
+
+
+/**
+ * TODO
+ */
+var fetchAccountTrans = function( db, account, callback ) {
+    if (account == null) {
+        callback(null, []);
+        return;
+    }
+
+    console.log("fetchAccountTrans: account.accountName=" + account.accountName);
+
+    var collection = db.get("transactions")
+    collection.find({ 
+                        "account": account.accountName,
+                        "fi": account.fiName 
+                    },
+                    { 
+                        "sort": { "timestamp": -1 } 
+                    },
+                    callback );
+};
+
+
+/**
+ * REST API
+ * @return the transaction data for the given account 
+ */
+app.get('/accounts/:id/transactions', function (req, res) {
+    console.log("GET /accounts/" + req.params.id + "/transactions");
+
+    fetchById( req.db.get("accounts"), 
+               parseInt(req.params.id), 
+               function(e, account) {
+                   fetchAccountTrans(req.db, account, function(e, trans) {
+                       console.log("GET /accounts/" + req.params.id + "/transactions: RESPONSE: trans.length=" + trans.length );
+                       res.json(trans);
+                   });
+               });
+});
 
 
 /**
@@ -97,7 +170,7 @@ app.put('/accounts/:id', function (req, res) {
         console.log("PUT /accounts/" + req.params.id + ": RESPONSE:\n" + JSON.stringify(docs))
         res.json(doc);
     });
-})
+});
 
 
 /**
@@ -114,7 +187,7 @@ app.get('/transactions/:id', function (req, res) {
         console.log("GET /transactions/" + req.params.id + ": RESPONSE: " + JSON.stringify(docs));
         res.json(docs);
     });
-})
+});
 
 
 /**
@@ -148,7 +221,7 @@ app.put('/transactions/:id', function (req, res) {
         console.log("UPDATE /tags " + JSON.stringify(req.body.tags || []) + ": COMPLETE");
     });
 
-})
+});
 
 
 
@@ -169,7 +242,7 @@ app.post('/query/accounts', function (req, res) {
         console.log("POST accounts/query: RESPONSE:\n" + JSON.stringify(docs))
         res.json(docs);
     });
-})
+});
 
 
 /**
@@ -190,7 +263,7 @@ app.post('/query/transactions', function (req, res) {
         console.log("POST transactions/query: RESPONSE:\n" + JSON.stringify(docs))
         res.json(docs);
     });
-})
+});
 
 
 

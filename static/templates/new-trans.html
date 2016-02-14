@@ -54,3 +54,135 @@
     </li>
 </ul>
 
+
+<table class="table table-condensed table-hover">
+    <tr>
+        <th></th>
+        <th>Date</th>
+        <th>Amount</th>
+        <th>Merchant</th> 
+        <th>Account</th> 
+    </tr>
+    <tr ng-repeat="tran in newTrans" >
+        <td>
+            <form class="div-tags div-ack">
+                <span> <!-- TODO: is this span needed? -->
+                    <button class="btn btn-info btn-sm" ng-click="ackNewTran(tran._id)">ack</button>
+                </span>
+            </form>
+        </td>
+        <td ng-bind="tran.date"></td>
+        <td tm-is-debit="{{tran.isDebit || tran.isTransfer}}" tm-is-transfer="{{tran.isTransfer}}" ng-bind="tran.amount"></td>
+        <td>
+            <div>
+                <span ng-bind="tran.merchant"></span>
+                <span class="new-tran-ispending">{{ (tran.isPending) ? "(pending)" : "" }}</span>
+            </div>
+            <div class="div-tags" ng-controller="TagFormController">
+                <div>
+                    <form class="form-tag" style="float: left;" ng-submit="onFormSubmit()" >
+                        <span> 
+                            <!-- TODO: pu-elastic-input isn't working quite right. doesn't seem to know the font size -->
+                            <input type="text" 
+                                   id="input-tag-{{tran._id}}"
+                                   class="input-tag form-control input-sm" 
+                                   pu-elastic-input 
+                                   style="min-width: 60px; max-width: 150px;"
+                                   ng-model="inputTag" 
+                                   ng-change="onChangeInputTag()"
+                                   placeholder="+ tag" />
+                        </span>
+                    </form>
+                    <div style="float:left;">
+                        <span ng-repeat="tag in tran.tags" class="span-tag">
+                            {{tag}}
+                            <!-- TODO: could make this a button instead (we're not inside a form) -->
+                            <a class="span-tag-x" href="" ng-click="removeTag(tag)">x</a>
+                        </span>
+                    </div>
+                </div>
+                <!-- TODO: this won't handle wrapping very well -->
+                <br />
+                <form class="form-tag">
+                    <ul class="list-unstyled">
+                        <li class="filtered-tag" ng-repeat="filteredTag in filteredTags">
+                            <!-- TODO: passing filteredTag as a parm since it doesn't appear to be attached to the $scope -->
+                            <button class="btn btn-sm" ng-click="onClickFilteredTag(filteredTag)">{{filteredTag}}</button>
+                        </li>
+                    </ul>
+                </form>
+            </div>
+        </td>
+        <!-- TODO: lookup account "nickname" -->
+        <td><span class="new-tran-account">{{tran.fi}} - {{tran.account}}</span></td>
+    </tr>
+</table>
+
+
+
+<table class="table table-condensed table-hover">
+    <tr>
+        <th></th>
+        <th>Date</th>
+        <th>Amount</th>
+        <th>Merchant</th> 
+        <th>Account</th> 
+    </tr>
+    <tr ng-repeat="tran in newTrans" >
+        <td>
+            <form class="div-tags div-ack">
+                <span> <!-- TODO: is this span needed? -->
+                    <button class="btn btn-info btn-sm" ng-click="ackNewTran(tran._id)">ack</button>
+                </span>
+            </form>
+        </td>
+        <td ng-bind="tran.date"></td>
+        <td tm-is-debit="{{tran.isDebit || tran.isTransfer}}" tm-is-transfer="{{tran.isTransfer}}" ng-bind="tran.amount"></td>
+        <td>
+            <table>
+                <tr>
+                    <td><span ng-bind="tran.merchant"></span></td>
+                    <td><span class="new-tran-ispending">{{ (tran.isPending) ? "(pending)" : "" }}</span></td>
+                </tr>
+                <tr class="div-tags" ng-controller="TagFormController">
+                    <td>
+                        <form class="form-tag" ng-submit="onFormSubmit()" >
+                            <span> 
+                                <!-- TODO: pu-elastic-input isn't working quite right. doesn't seem to know the font size -->
+                                <input type="text" 
+                                       id="input-tag-{{tran._id}}"
+                                       class="input-tag form-control input-sm" 
+                                       pu-elastic-input 
+                                       style="min-width: 60px; max-width: 150px;"
+                                       ng-model="inputTag" 
+                                       ng-change="onChangeInputTag()"
+                                       placeholder="+ tag" />
+                            </span>
+                        </form>
+                        <br />
+                        <form class="form-tag">
+                            <ul class="list-unstyled">
+                                <li class="filtered-tag" ng-repeat="filteredTag in filteredTags">
+                                    <!-- TODO: passing filteredTag as a parm since it doesn't appear to be attached to the $scope -->
+                                    <button class="btn btn-sm" ng-click="onClickFilteredTag(filteredTag)">{{filteredTag}}</button>
+                                </li>
+                            </ul>
+                        </form>
+                    </td>
+                    <td>
+                        <span ng-repeat="tag in tran.tags" class="span-tag">
+                            {{tag}}
+                            <!-- TODO: could make this a button instead (we're not inside a form) -->
+                            <a class="span-tag-x" href="" ng-click="removeTag(tag)">x</a>
+                        </span>
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <!-- TODO: lookup account "nickname" -->
+        <td><span class="new-tran-account">{{tran.fi}} - {{tran.account}}</span></td>
+    </tr>
+</table>
+
+
+

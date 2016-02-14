@@ -3,49 +3,131 @@
 
 <head>
     <!-- Note: load JS after html to improve rendering time -->
-    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore.js"></script>
+    <!-- script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular.min.js"></script -->
+    <script src="js/angular-1.5.0.js"></script>
+    <!-- script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore.js"></script -->
+    <script src="js/underscore.js"></script>
 
     <!-- load app module _after_ angular (otherwise you'll get 'angular not defined') -->
     <script src="js/angular-elastic-input.min.js"/></script>
     <script src="js/my-app.js"/></script>
 
     <!-- bootstrap -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <!-- link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous" -->
+    <!-- link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.css" -->
+    <link rel="stylesheet" href="css/bootstrap.css">
     <link rel="stylesheet" href="css/my-app.css">
 </head>
 
 <body>
-     <div class="container" ng-controller="MainController">
+    <div class="container" ng-controller="MainController">
 
-         <h3>New Transactions</h3>
-         <div ng-include="'templates/new-trans.html'">
-         </div>
+        <div class="tm-tran-list">
+            <h3>New Transactions</h3>
+            <div ng-include="'templates/new-trans-table.html'">
+            </div>
+        </div>
 
-         <h3>Active Accounts</h3>
-         <table class="table table-condensed table-hover">
-             <tr>
-                 <th>Balance</th>
-                 <th>Account</th>
-                 <th colspan="2">Last Updated</th>
-             </tr>
-             <tr class="tm-account-list" ng-repeat="account in accounts" >
-                 <td tm-is-debit='{{ (account.accountType == "credit") }}' 
-                     tm-account-type="{{account.accountType}}" 
-                     ng-bind="account.currentBalance | currency"></td>
-                 <td>{{account.fiName}} - {{account.accountName}}</td>
-                 <td>{{ formatEpochAsDate(account.fiLastUpdated) }}</td>
-                 <td>({{ account.lastUpdatedInString }} ago)</td>
-             </tr>
-             <tr class="tm-account-list-total">
-                 <th>{{ getNetWorth() | currency }}</th>
-                 <th>Net worth</th>
-                 <th></th>
-                 <th></th>
-             </tr>
-         </table>
+        <div class="tm-account-list">
+            <h3>Bank &amp; Credit Accounts</h3>
+            <table class="table table-condensed table-hover">
+                <tr>
+                    <th class="text-right">Balance</th>
+                    <th>Account</th>
+                    <th class="text-right">7 days</th>
+                    <th class="text-right">30 days</th>
+                    <th class="text-right">90 days</th>
+                    <th class="text-right">365 days</th>
+                    <th>Updated</th>
+                </tr>
+                <tr ng-repeat="account in bankAndCreditAccounts" >
+                    <td class="text-right"
+                        tm-is-debit='{{ (account.accountType == "credit") }}' 
+                        tm-account-type="{{account.accountType}}" 
+                        ng-bind="account.currentBalance | currency"></td>
+                    <td>{{account.fiName}} - {{account.accountName}}</td>
+                    <td class="text-right" tm-is-debit='{{ account.last7days < 0 }}'>{{ account.last7days | currency }}</td>
+                    <td class="text-right" tm-is-debit='{{ account.last30days < 0 }}'>{{ account.last30days | currency }}</td>
+                    <td class="text-right" tm-is-debit='{{ account.last90days < 0 }}'>{{ account.last90days | currency }}</td>
+                    <td class="text-right" tm-is-debit='{{ account.last365days < 0 }}'>{{ account.last365days | currency }}</td>
+                    <td>{{ formatEpochAsDate(account.fiLastUpdated) }}</td>
+                </tr>
+                <tr class="tm-account-list-total">
+                    <th class="text-right" tm-is-debit='{{ sumField(bankAndCreditAccounts,"value") < 0 }}'>{{ sumField(bankAndCreditAccounts,"value") | currency }}</th>
+                    <th>Total</th>
+                    <th class="text-right" tm-is-debit='{{ sumField(bankAndCreditAccounts,"last7days") < 0 }}'>{{ sumField(bankAndCreditAccounts,"last7days") | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ sumField(bankAndCreditAccounts,"last30days") < 0 }}'>{{ sumField(bankAndCreditAccounts,"last30days") | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ sumField(bankAndCreditAccounts,"last90days") < 0 }}'>{{ sumField(bankAndCreditAccounts,"last90days") | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ sumField(bankAndCreditAccounts,"last365days") < 0 }}'>{{ sumField(bankAndCreditAccounts,"last365days") | currency }}</th>
+                    <th></th>
+                </tr>
+            </table>
+        </div>
 
-     </div>
+        <div class="tm-account-list">
+            <h3>Investment &amp; Other Accounts</h3>
+            <table class="table table-condensed table-hover">
+                <tr>
+                    <th class="text-right">Balance</th>
+                    <th>Account</th>
+                    <th class="text-right">7 days</th>
+                    <th class="text-right">30 days</th>
+                    <th class="text-right">90 days</th>
+                    <th class="text-right">365 days</th>
+                    <th>Updated</th>
+                </tr>
+                <tr ng-repeat="account in investmentAccounts" >
+                    <td class="text-right"
+                        tm-is-debit='{{ (account.accountType == "credit") }}' 
+                        tm-account-type="{{account.accountType}}" 
+                        ng-bind="account.currentBalance | currency"></td>
+                    <td>{{account.fiName}} - {{account.accountName}}</td>
+                    <td class="text-right" tm-is-debit='{{ account.last7days < 0 }}'>{{ account.last7days | currency }}</td>
+                    <td class="text-right" tm-is-debit='{{ account.last30days < 0 }}'>{{ account.last30days | currency }}</td>
+                    <td class="text-right" tm-is-debit='{{ account.last90days < 0 }}'>{{ account.last90days | currency }}</td>
+                    <td class="text-right" tm-is-debit='{{ account.last365days < 0 }}'>{{ account.last365days | currency }}</td>
+                    <td>{{ formatEpochAsDate(account.fiLastUpdated) }}</td>
+                </tr>
+                <tr class="tm-account-list-total">
+                    <th class="text-right" tm-is-debit='{{ sumField(investmentAccounts,"value") < 0 }}'>{{ sumField(investmentAccounts,"value") | currency }}</th>
+                    <th>Total</th>
+                    <th class="text-right" tm-is-debit='{{ sumField(investmentAccounts,"last7days") < 0 }}'>{{ sumField(investmentAccounts,"last7days") | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ sumField(investmentAccounts,"last30days") < 0 }}'>{{ sumField(investmentAccounts,"last30days") | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ sumField(investmentAccounts,"last90days") < 0 }}'>{{ sumField(investmentAccounts,"last90days") | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ sumField(investmentAccounts,"last365days") < 0 }}'>{{ sumField(investmentAccounts,"last365days") | currency }}</th>
+                    <th></th>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr class="tm-account-list-total">
+                    <th class="text-right" tm-is-debit='{{ getNetWorth() < 0 }}'>{{ getNetWorth() | currency }}</th>
+                    <th>Net worth</th>
+                    <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last7days" ) < 0 }}'>{{ getNetWorthPerf( "last7days" ) | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last30days" ) < 0 }}'>{{ getNetWorthPerf( "last30days" ) | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last90days" ) < 0 }}'>{{ getNetWorthPerf( "last90days" ) | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last365days" ) < 0 }}'>{{ getNetWorthPerf( "last365days" ) | currency }}</th>
+                    <th></th>
+                </tr>
+            </table>
+        </div>
+
+    </div>
 </body>
 </html>
 

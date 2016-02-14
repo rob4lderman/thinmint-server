@@ -20,7 +20,9 @@ TODO: match up transfers (e.g. CC payments with CHECKING account checks, SAVINGS
       mint already marks the isTransfer field.
 
 TODO: account "nickname" - display in trans
-TODO: account balance change-since-last-checked (use accountsTimeSeries)
+
+TODO: compute back performance 
+
 
 TODO: account balance including pending (non-completed) trans
 
@@ -31,6 +33,7 @@ TODO: auto-tagging
 TODO: all investments trans have txnType=1, everything else txnType=0
       technically this is "income" too... 
 
+TODO: clean up unused tags
 
 ===================================================================================================
 CURL commands:
