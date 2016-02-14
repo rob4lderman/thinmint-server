@@ -437,15 +437,44 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
     console.log("AccountController: alive!");
 
+    // Get the context of the canvas element we want to select
+    var ctx = document.getElementById("myChart").getContext("2d");
+
     /**
-     * Set the given account on the scope.
+     *
      */
-    var setAccount = function( account ) {
-        $scope.account = account;
+    var renderChart = function( accountTimeSeries ) {
+        console.log("AccountController.renderChart: ");
+
+        labels = _.pluck( accountTimeSeries, "date");
+        var i=0;
+        var nth = Math.round( labels.length / 10 );
+        console.log("AccountController.renderChart: nth=" + nth + ", labels.length=" + labels.length);
+        labels = _.map( labels, function(label) { return ( i++ % nth == 0 ) ? label : "" ; } );
+
+        values = _.pluck( accountTimeSeries, "currentBalance");
+
+        var data = {
+            labels: labels,
+            datasets: [
+                {
+                    label: "My First dataset",
+                    fillColor: "rgba(220,220,220,0.2)",
+                    strokeColor: "rgba(220,220,220,1)",
+                    pointColor: "rgba(220,220,220,1)",
+                    pointStrokeColor: "#fff",
+                    pointHighlightFill: "#fff",
+                    pointHighlightStroke: "rgba(220,220,220,1)",
+                    data: values
+                }
+            ]
+        };
+
+        var myLineChart = new Chart(ctx).Line(data, {});
     };
 
     /**
-     * fetch accounts from db and put them in $scope.accounts
+     * fetch account info from db
      *
      * @sideeffect $scope.accounts - populated from db
      */
@@ -463,6 +492,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
              .then( function success(response) {
                         console.log( "fetchAccount: /accounts/" + accountId + "/timeseries: response=" + JSON.stringify(response));
                         $scope.accountTimeSeries = response.data;
+                        renderChart( $scope.accountTimeSeries );
                     }, 
                     function error(response) {
                         alert("GET /account/" + accountId + "/timeseries: response=" + JSON.stringify(response)); // TODO: dev
@@ -470,7 +500,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
         $http.get( "/accounts/" + accountId + "/transactions")
              .then( function success(response) {
-                        console.log( "fetchAccount: /accounts/" + accountId + "/transactions: response=" + JSON.stringify(response));
+                        // -rx- console.log( "fetchAccount: /accounts/" + accountId + "/transactions: response=" + JSON.stringify(response));
                         $scope.accountTrans = response.data;
                     }, 
                     function error(response) {
@@ -483,7 +513,6 @@ angular.module( "MyApp",  ['puElasticInput'] )
      * Go!
      */
     fetchAccount( 2759791 );
-
 
 }])
 

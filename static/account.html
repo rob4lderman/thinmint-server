@@ -8,9 +8,11 @@
     <!-- script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore.js"></script -->
     <script src="js/underscore.js"></script>
 
+    <script src="js/Chart.js"></script>
+
     <!-- load app module _after_ angular (otherwise you'll get 'angular not defined') -->
-    <script src="js/angular-elastic-input.min.js"/></script>
-    <script src="js/my-app.js"/></script>
+    <script src="js/angular-elastic-input.min.js"></script>
+    <script src="js/my-app.js"></script>
 
     <!-- bootstrap -->
     <!-- link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous" -->
@@ -24,6 +26,8 @@
 
         <div ng-controller="AccountController">
             <h3>{{ account.accountName }}: {{ account.fiName }}</h3>
+
+            <canvas id="myChart" width="1000" height="400"></canvas>
 
         </div>
 
