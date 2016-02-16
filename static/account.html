@@ -22,13 +22,37 @@
 </head>
 
 <body>
-    <div class="container">
+    <div id="tm-page-header" class="container-fluid">
+        <div class="container">
+            <a href="/">Thinmint</a>
+        </div>
+    </div>
 
-        <div ng-controller="AccountController">
-            <h3>{{ account.accountName }}: {{ account.fiName }}</h3>
+    <div class="container" ng-controller="AccountController">
 
-            <canvas id="myChart" width="1000" height="400"></canvas>
+        <!-- account summary -->
+        <div class="tm-portal">
+            <h3>Account Summary</h3>
+            <table class="table table-condensed table-hover tm-account-list">
+                <tr ng-include="'templates/account-th.html'"></tr>
+                <tr ng-include="'templates/account-tr.html'"></tr>
+            </table>
+        </div>
 
+        <!-- account charts -->
+        <div class="tm-portal">
+            <h3>Time Series: Account Balance</h3>
+            <div class="text-center">
+                <canvas id="myChart" width="1000" height="400"></canvas>
+            </div>
+        </div>
+
+        <div class="tm-portal">
+            <h3>Transactions</h3>
+            <table class="table table-condensed table-hover tm-tran-table">
+                <tr ng-include="'templates/tran-th.html'"></tr>
+                <tr ng-repeat="tran in accountTrans" ng-include="'templates/tran-tr.html'"></tr>
+            </table>
         </div>
 
     </div>

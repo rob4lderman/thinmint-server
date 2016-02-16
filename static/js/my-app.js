@@ -1,43 +1,9 @@
 angular.module( "MyApp",  ['puElasticInput'] )
 
-.controller( "MainController",   ["$scope", "$http", "_",
-                         function( $scope,   $http,   _ ) {
+.controller( "MainController",   ["$scope", "_", "Logger", "DateUtils", "Datastore",
+                         function( $scope,   _,   Logger,   DateUtils,   Datastore ) {
 
-    console.log("MainController: alive!");
-
-    /**
-     * fetch new (i.e. hasBeenAcked=false) trans from the db and
-     * put them in $scope.newTrans
-     *
-     * @sideeffect $scope.newTrans - populated from db
-     */
-    var fetchNewTrans = function() {
-
-        var postData = { "query": { "$or": [ { "hasBeenAcked": { "$exists": false } }, { "hasBeenAcked" : false } ] },
-                         "options": { "sort": { "timestamp": -1 } } 
-                       };
-        $http.post( "/query/transactions", postData )
-             .then( function success(response) {
-                 console.log( "fetchNewTrans: response=" + JSON.stringify(response,null,2));
-                 $scope.newTrans = response.data;
-             }, function error(response) {
-                 alert("POST /query/transactions: response=" + JSON.stringify(response)); // TODO: dev
-             } );
-    };
-
-    /**
-     * @return formatted date string
-     */
-    var formatEpochAsDate = function( timestamp ) {
-        var date = new Date(timestamp);
-        var mon = "0" + (date.getMonth() + 1);
-        var day = "0" + (date.getDate());
-        var year = date.getYear() % 100;
-        // var hours = date.getHours();
-        // var minutes = "0" + date.getMinutes();
-        // var seconds = "0" + date.getSeconds();
-        return mon.substr(-2) + "/" + day.substr(-2) + "/" + year ; // + " " + hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
-    };
+    Logger.info("MainController: alive!");
 
     /**
      * Set $scope.accounts 
@@ -56,85 +22,25 @@ angular.module( "MyApp",  ['puElasticInput'] )
     };
 
     /**
-     * fetch accounts from db and put them in $scope.accounts
-     *
-     * @sideeffect $scope.accounts - populated from db
-     */
-    var fetchAccounts = function() {
-        $http.get( "/accounts" )
-             .then( function success(response) {
-                 // response.data – {string|Object} – The response body transformed with the transform functions.
-                 // response.status – {number} – HTTP status code of the response.
-                 // response.headers – {function([headerName])} – Header getter function.
-                 // resposne.config – {Object} – The configuration object that was used to generate the request.
-                 // response.statusText – {string} – HTTP status text of the response.
-                 console.log( "fetchAccounts: response=" + JSON.stringify(response,null,2));
-                 setAccounts( response.data );
-             }, function error(response) {
-                 alert("GET /accounts: response=" + JSON.stringify(response)); // TODO: dev
-             } );
-    };
-
-    /**
-     * fetch accounts with isActive=true from db and put them in $scope.accounts
-     *
-     * @sideeffect $scope.accounts - populated from db
-     */
-    var fetchActiveAccounts = function() {
-        var postData = { "query": { "isActive": true } };
-
-        $http.post( "/query/accounts", postData )
-             .then( function success(response) {
-                 console.log( "MainController.fetchActiveAccounts: response=" + JSON.stringify(response,null,2));
-                 setAccounts( response.data );
-             }, function error(response) {
-                 alert("POST /query/accounts: response=" + JSON.stringify(response)); // TODO: dev
-             } );
-    };
-
-    /**
      * Set hasBeenAcked=true for the given tran in the db.
      */
     var ackNewTran = function(tranId) {
 
-        console.log("MainController.ackNewTran: " + tranId);
+        Logger.info("MainController.ackNewTran: " + tranId);
 
         // remove it from the list locally (faster)
         $scope.newTrans = _.filter( $scope.newTrans, function(tran) { return tran._id != tranId } );
 
         // update the db.
         var putData = { "hasBeenAcked": true } ;
-        $http.put( "/transactions/" + tranId, putData )
-             .then( function success(response) {
-                 console.log( "MainController.ackNewTran: response=" + JSON.stringify(response,null,2));
-             }, function error(response) {
-                 alert("PUT /transactions/" + tranId + ": response=" + JSON.stringify(response)); // TODO: dev
-             } );
-    };
-
-    /**
-     * Fetch the list of tags from the db.
-     */
-    var fetchTags = function() {
-        $http.get( "/tags" )
-             .then( function success(response) {
-                 // response.data – {string|Object} – The response body transformed with the transform functions.
-                 // response.status – {number} – HTTP status code of the response.
-                 // response.headers – {function([headerName])} – Header getter function.
-                 // resposne.config – {Object} – The configuration object that was used to generate the request.
-                 // response.statusText – {string} – HTTP status text of the response.
-                 console.log( "MainController.fetchTags: response=" + JSON.stringify(response,null,2));
-                 $scope.tags = response.data ;
-             }, function error(response) {
-                 alert("GET /tags: response=" + JSON.stringify(response)); // TODO: dev
-             } );
+        Datastore.putTran( tranId, putData );
     };
 
     /**
      * Listens for $addTranTag events.
      */
     var onAddTranTag = function(theEvent, tag) {
-        console.log("MainController.onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
+        Logger.info("MainController.onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
 
         if ( ! _.contains($scope.tags, tag) ) {
             $scope.tags.push(tag);
@@ -150,7 +56,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
                                  return memo + account[fieldName]
                              }, 
                              0);
-        // console.log("MainController.sumField: fieldName=" + fieldName + ": " + retMe);
+        Logger.fine("MainController.sumField: fieldName=" + fieldName + ": " + retMe);
         return retMe;
     };
 
@@ -176,7 +82,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
     $scope.bankAndCreditAccounts = [];
     $scope.newTrans = [];
     $scope.ackNewTran = ackNewTran;
-    $scope.formatEpochAsDate = formatEpochAsDate;
+    $scope.DateUtils = DateUtils;
     $scope.getNetWorth = getNetWorth;
     $scope.getNetWorthPerf = getNetWorthPerf;
     $scope.sumField = sumField;
@@ -186,9 +92,13 @@ angular.module( "MyApp",  ['puElasticInput'] )
     /**
      * Init data
      */
-    fetchActiveAccounts();
-    fetchNewTrans();
-    fetchTags();
+    Datastore.fetchActiveAccounts().then( setAccounts );
+
+    Datastore.fetchNewTrans()
+             .then( function success(newTrans) { $scope.newTrans = newTrans; } ); 
+
+    Datastore.fetchTags()
+             .then( function success(tags) { $scope.tags = tags; } ); 
 
 }])
 
@@ -197,39 +107,10 @@ angular.module( "MyApp",  ['puElasticInput'] )
  * ng-controller for tran tagging <form>(s).
  * There's one of these controllers for each tran ($scope.tran).
  */
-.controller( "TagFormController",   ["$scope", "$http", "_", "$rootScope",
-                            function( $scope,   $http,   _ ,  $rootScope) {
+.controller( "TagFormController",   ["$scope", "_", "$rootScope", "Logger", "Datastore",
+                            function( $scope,   _ ,  $rootScope,   Logger,   Datastore) {
 
-    console.log("TagFormController: alive!: $scope.tran=" + $scope.tran.amount);
-
-    // -rx- /**
-    // -rx-  * Called whenever the tag input field changes
-    // -rx-  */
-    // -rx- var onChangeInputTag = function() {
-    // -rx-     // -rx- if ( $scope.inputTag.length >= 2 ) {
-    // -rx-     // -rx-     // Filter for auto-complete list
-    // -rx-     // -rx-     $scope.filteredTags = _.filter( $scope.tags, function(tag) { return tag.startsWith( $scope.inputTag ); } );
-    // -rx-     // -rx-     console.log("TagFormController.onChangeInputTag: " + $scope.inputTag + "; filteredTags=" + JSON.stringify($scope.filteredTags) );
-
-    // -rx-     // -rx-     if ($scope.filteredTags.length > 0) {
-    // -rx-     // -rx-         var typedTextLen = $scope.inputTag.length;
-    // -rx-     // -rx-         // $scope.inputTag = $scope.filteredTags[0];
-
-    // -rx-     // -rx-         console.log( "TagFormController.onChangeInputTag: typedTextLen=" + typedTextLen + ", $scope.inputTag=" + $scope.inputTag );
-    // -rx-     // -rx-         // var inputElem = angular.element( document.querySelector("#input-tag-" + $scope.tran._id) );
-    // -rx-     // -rx-         var inputElem = document.getElementById("input-tag-" + $scope.tran._id );
-    // -rx-     // -rx-         inputElem.value = $scope.filteredTags[0];
-    // -rx-     // -rx-         inputElem.setSelectionRange( typedTextLen , $scope.filteredTags[0].length );
-    // -rx-     // -rx-     }
-
-    // -rx-     // -rx- } else {
-    // -rx-     // -rx-     // TODO: when backspacing down to len=1, the list doesn't disappear.
-    // -rx-     // -rx-     //       i think i might need to use $digest or something
-    // -rx-     // -rx-     $scope.filteredTags = [];
-    // -rx-     // -rx- }
-
-
-    // -rx- };
+    Logger.fine("TagFormController: alive!: $scope.tran=" + $scope.tran.amount);
 
     /**
      * @return true if the given string is null or empty
@@ -242,14 +123,9 @@ angular.module( "MyApp",  ['puElasticInput'] )
      * PUT the tag updates to the db.
      */
     var putTranTags = function() {
-        console.log("TagFormController.putTranTags: " + JSON.stringify($scope.tran.tags));
+        Logger.info("TagFormController.putTranTags: " + JSON.stringify($scope.tran.tags));
         var putData = { "tags": $scope.tran.tags } ;
-        $http.put( "/transactions/" + $scope.tran._id, putData )
-             .then( function success(response) {
-                 console.log( "TagFormController.putTranTags: response=" + JSON.stringify(response,null,2));
-             }, function error(response) {
-                 alert("PUT /transactions/" + $scope.tran._id + ": response=" + JSON.stringify(response)); // TODO: dev
-             } );
+        Datastore.putTran( $scope.tran._id, putData );
     };
 
     /**
@@ -276,7 +152,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
             // Refresh parent $scope.tags since we may have just added a brand new tag.
             // Safest way to do this is to via Event.
-            console.log("TagFormController.addTranTag: $rootScope.$broadcast(event=$addTranTag, tag=" + tag + ")");
+            Logger.info("TagFormController.addTranTag: $rootScope.$broadcast(event=$addTranTag, tag=" + tag + ")");
             $rootScope.$broadcast("$addTranTag", tag);
         }
     }
@@ -286,22 +162,9 @@ angular.module( "MyApp",  ['puElasticInput'] )
      * Add the tag to the tran.
      */
     var onFormSubmit = function() {
-        console.log("TagFormController.onFormSubmit: " + $scope.inputTag);
+        Logger.info("TagFormController.onFormSubmit: " + $scope.inputTag);
         addTranTag( $scope.inputTag )
     }
-
-    // -rx- /**
-    // -rx-  * Called when a filteredTag from the auto-complete list is clicked.
-    // -rx-  */
-    // -rx- var onClickFilteredTag = function(filteredTag) {
-    // -rx-     console.log("TagFormController.onClickFilteredTag: " + filteredTag );
-    // -rx-     addTranTag(filteredTag);
-    // -rx-     
-    // -rx-     // TODO: should use angular directive?
-    // -rx-     var inputElem = angular.element( document.querySelector("#input-tag-" + $scope.tran._id) );
-    // -rx-     console.log("TagFormController.onClickFilteredTag: inputElem=" + inputElem);
-    // -rx-     inputElem[0].focus();
-    // -rx- }
 
     /**
      * Remove the tag from the tran.
@@ -310,7 +173,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
         // remove it from the tags list 
         $scope.tran.tags = _.filter( $scope.tran.tags, function(t) { return t != tag; } );
-        console.log("TagFormController.removeTag: " + tag + ", $scope.tran.tags=" + JSON.stringify($scope.tran.tags) );
+        Logger.info("TagFormController.removeTag: " + tag + ", $scope.tran.tags=" + JSON.stringify($scope.tran.tags) );
 
         // Update the db
         putTranTags();
@@ -319,9 +182,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
     /**
      * Export to scope.
      */
-    // -rx- $scope.onChangeInputTag = onChangeInputTag;
     $scope.onFormSubmit = onFormSubmit;
-    // -rx- $scope.onClickFilteredTag = onClickFilteredTag;
     $scope.removeTag = removeTag;
 
     /**
@@ -345,13 +206,14 @@ angular.module( "MyApp",  ['puElasticInput'] )
  * the typed text will be auto-filled into the input box.
  *
  */
-.directive('tmAutoFill', [ "_", "$parse", function(_, $parse) {
+.directive('tmAutoFill', [ "_", "$parse", "Logger",
+                   function(_,   $parse,   Logger) {
     var directiveDefiningObj = {
         require: "ngModel",
         link: function($scope, element, attrs, ngModel) {
 
                   var fillStringList = $parse(attrs.tmAutoFill)($scope);
-                  console.log("directive::tmAutoFill.link: fillStringList=" + JSON.stringify(fillStringList));
+                  Logger.fine("directive::tmAutoFill.link: fillStringList=" + JSON.stringify(fillStringList));
 
                   var fillAndSelect = function( element, fillText ) {
                         var typedTextLen = element.val().length;
@@ -368,7 +230,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
                   };
 
                   element.on("input", function(event) {
-                      console.log("directive::tmAutoFill.oninput: "
+                      Logger.fine("directive::tmAutoFill.oninput: "
                                         + "element.val()=" + element.val()
                                         + ", fillStringList=" + JSON.stringify(fillStringList)
                                        );
@@ -397,7 +259,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
 
                   element.on("keydown", function(keyEvent) {
-                      console.log("directive::tnWatchInput.keydown: $scope.inputTag=" + $scope.inputTag 
+                      Logger.fine("directive::tnWatchInput.keydown: $scope.inputTag=" + $scope.inputTag 
                                         + ", keyEvent.which=" + keyEvent.which
                                         + ", element.val()=" + element.val()
                                         + ", element.selectionStart=" + element[0].selectionStart
@@ -432,10 +294,10 @@ angular.module( "MyApp",  ['puElasticInput'] )
 /**
  *
  */
-.controller( "AccountController",   ["$scope", "$http", "_",
-                            function( $scope,   $http,   _ ) {
+.controller( "AccountController",   ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore",
+                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore) {
 
-    console.log("AccountController: alive!");
+    Logger.info("AccountController: alive! $location.search=" + JSON.stringify($location.search()));
 
     // Get the context of the canvas element we want to select
     var ctx = document.getElementById("myChart").getContext("2d");
@@ -444,13 +306,16 @@ angular.module( "MyApp",  ['puElasticInput'] )
      *
      */
     var renderChart = function( accountTimeSeries ) {
-        console.log("AccountController.renderChart: ");
+        Logger.fine("AccountController.renderChart: ");
 
+        // Too many labels!  Pick 10 of them.
         labels = _.pluck( accountTimeSeries, "date");
         var i=0;
         var nth = Math.round( labels.length / 10 );
-        console.log("AccountController.renderChart: nth=" + nth + ", labels.length=" + labels.length);
+        Logger.fine("AccountController.renderChart: nth=" + nth + ", labels.length=" + labels.length);
         labels = _.map( labels, function(label) { return ( i++ % nth == 0 ) ? label : "" ; } );
+        // TODO: the x-axis is a time-series, but chart.js doesn't know that, so it's not properly spaced.
+        //       maybe try google charts instead.
 
         values = _.pluck( accountTimeSeries, "currentBalance");
 
@@ -474,49 +339,282 @@ angular.module( "MyApp",  ['puElasticInput'] )
     };
 
     /**
-     * fetch account info from db
-     *
-     * @sideeffect $scope.accounts - populated from db
+     * @return the accountId from the query string.
      */
-    var fetchAccount = function( accountId ) {
-        $http.get( "/accounts/" + accountId)
-             .then( function success(response) {
-                        console.log( "fetchAccount: /accounts/" + accountId + ": response=" + JSON.stringify(response));
-                        $scope.account = response.data;
-                    }, 
-                    function error(response) {
-                        alert("GET /account/" + accountId + ": response=" + JSON.stringify(response)); // TODO: dev
-                    });
+    var parseAccountIdFromLocation = function() {
+        return $location.search().accountId || 0;
+    }
 
-        $http.get( "/accounts/" + accountId + "/timeseries")
-             .then( function success(response) {
-                        console.log( "fetchAccount: /accounts/" + accountId + "/timeseries: response=" + JSON.stringify(response));
-                        $scope.accountTimeSeries = response.data;
-                        renderChart( $scope.accountTimeSeries );
-                    }, 
-                    function error(response) {
-                        alert("GET /account/" + accountId + "/timeseries: response=" + JSON.stringify(response)); // TODO: dev
-                    });
-
-        $http.get( "/accounts/" + accountId + "/transactions")
-             .then( function success(response) {
-                        // -rx- console.log( "fetchAccount: /accounts/" + accountId + "/transactions: response=" + JSON.stringify(response));
-                        $scope.accountTrans = response.data;
-                    }, 
-                    function error(response) {
-                        alert("GET /account/" + accountId + "/transactions: response=" + JSON.stringify(response)); // TODO: dev
-                    });
-    };
-
+    /**
+     * Export to scope.
+     */
+    $scope.DateUtils = DateUtils;
 
     /**
      * Go!
      */
-    fetchAccount( 2759791 );
+    Datastore.fetchAccount( parseAccountIdFromLocation() )
+             .then( function success(account) { $scope.account = account; } ); 
+
+    Datastore.fetchAccountTimeSeries( parseAccountIdFromLocation() )
+             .then( function success(accountTimeSeries) { 
+                        $scope.accountTimeSeries = accountTimeSeries;
+                        renderChart( $scope.accountTimeSeries );
+                    });
+
+    Datastore.fetchAccountTrans( parseAccountIdFromLocation() )
+             .then( function success(accountTrans) { $scope.accountTrans = accountTrans; } ); 
+
+    Datastore.fetchTags()
+             .then( function success(tags) { $scope.tags = tags; } ); 
+
 
 }])
 
 
+/**
+ * Logger
+ */
+.factory("Logger", [ function() {
+
+    var info = function(msg) {
+        console.log(msg);
+    }
+
+    var fine = function(msg) {
+        // console.log(msg);
+    }
+
+    var severe = function(msg) {
+        alert(msg);
+    }
+
+    return {
+        info: info,
+        fine: fine,
+        severe: severe
+    };
+
+}])
+
+
+/**
+ * Mongo datastore.
+ */
+.factory("Datastore", [ "$http", "Logger",
+               function( $http,   Logger ) {
+
+    /**
+     * Fetch the list of tags from the db.
+     *
+     * @return promise, fulfilled with tags list
+     */
+    var fetchTags = function() {
+        Logger.info("Datastore.fetchTags: ");
+        return $http.get( "/tags" )
+                    .then( function success(response) {
+                               // response.data – {string|Object} – The response body transformed with the transform functions.
+                               // response.status – {number} – HTTP status code of the response.
+                               // response.headers – {function([headerName])} – Header getter function.
+                               // resposne.config – {Object} – The configuration object that was used to generate the request.
+                               // response.statusText – {string} – HTTP status text of the response.
+                               Logger.fine( "Datastore.fetchTags: response=" + JSON.stringify(response,null,2));
+                               return response.data ;
+                           }, function error(response) {
+                               Logger.severe("Datastore.fetchTags: GET /tags: response=" + JSON.stringify(response)); 
+                           } );
+    };
+
+    /**
+     * fetch account info from db
+     *
+     * @return promise, fulfilled by the account record.
+     */
+    var fetchAccount = function( accountId ) {
+        Logger.info("Datastore.fetchAccount: accountId=" + accountId);
+
+        // Promises:
+        // $http.get returns a Promise.
+        // A Promise object has a method on it called then(). 
+        // then() takes two functions: a "success" callback and an "error" callback.
+        // When the Promise is resolved, one or the other will be called.
+        // the then() method returns another (chained) Promise.
+        // The chaned Promise is resolved after the first Promise is resolved.
+        // The value returned from the success callback becomes the "fulfillment value" for the chained Promise.
+        return $http.get( "/accounts/" + accountId)
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.fetchAccount: /accounts/" + accountId + ": response=" + JSON.stringify(response));
+                               return response.data;
+                           }, 
+                           function error(response) {
+                               Logger.severe("Datastore.fetchAccount: GET /account/" + accountId + ": response=" + JSON.stringify(response)); 
+                           });
+    };
+
+    /**
+     * @return promise, fulfilled by the accountTimeSeries records.
+     */
+    var fetchAccountTimeSeries = function( accountId ) {
+        Logger.info("Datastore.fetchAccountTimeSeries: accountId=" + accountId);
+        return $http.get( "/accounts/" + accountId + "/timeseries")
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.fetchAccountTimeSeries: /accounts/" + accountId + "/timeseries: response=" + JSON.stringify(response));
+                               return response.data;
+                           }, 
+                           function error(response) {
+                               Logger.severe("Datastore.fetchAccountTimeSeries: GET /account/" + accountId + "/timeseries: response=" + JSON.stringify(response)); 
+                           });
+    };
+
+    /**
+     * @return promise, fulfilled by the account's tran records.
+     */
+    var fetchAccountTrans = function( accountId ) {
+        Logger.info("Datastore.fetchAccountTrans: accountId=" + accountId);
+        return $http.get( "/accounts/" + accountId + "/transactions")
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.fetchAccountTrans: /accounts/" + accountId + "/transactions: response=" + JSON.stringify(response));
+                               return response.data;
+                           }, 
+                           function error(response) {
+                               Logger.severe("Datastore.fetchAccountTrans: GET /account/" + accountId + "/transactions: response=" + JSON.stringify(response)); 
+                           });
+    };
+
+    /**
+     * fetch accounts from db 
+     *
+     * @return promise
+     */
+    var fetchAccounts = function() {
+        Logger.info("Datastore.fetchAccounts:");
+        return $http.get( "/accounts" )
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.fetchAccounts: response=" + JSON.stringify(response,null,2));
+                               return response.data;
+                           }, function error(response) {
+                               Logger.severe("Datastore.fetchAccounts: GET /accounts: response=" + JSON.stringify(response)); 
+                           } );
+    };
+
+    /**
+     * fetch accounts with isActive=true from db 
+     *
+     * @return promise
+     */
+    var fetchActiveAccounts = function() {
+        Logger.info("Datastore.fetchActiveAccounts:");
+        var postData = { "query": { "isActive": true } };
+
+        return $http.post( "/query/accounts", postData )
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.fetchActiveAccounts: response=" + JSON.stringify(response,null,2));
+                               return response.data;
+                           }, function error(response) {
+                               Logger.severe("Datastore.fetchActiveAccounts: POST /query/accounts: response=" + JSON.stringify(response)); 
+                           } );
+    };
+    
+    /**
+     * fetch new (i.e. hasBeenAcked=false) trans from the db 
+     *
+     * @return promise
+     */
+    var fetchNewTrans = function() {
+        Logger.info("Datastore.fetchNewTrans:");
+        var postData = { "query": { "$or": [ { "hasBeenAcked": { "$exists": false } }, { "hasBeenAcked" : false } ] },
+                         "options": { "sort": { "timestamp": -1 } } 
+                       };
+        return $http.post( "/query/transactions", postData )
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.fetchNewTrans: response=" + JSON.stringify(response,null,2));
+                               return response.data;
+                           }, function error(response) {
+                               Logger.severe("Datastore.fetchNewTrans: POST /query/transactions: response=" + JSON.stringify(response));
+                           } );
+    };
+
+    /**
+     * PUT /transactions/{tranId}
+     * {putData}
+     *
+     * @return promise
+     */
+    var putTran = function(tranId, putData) {
+
+        Logger.info("Datastore.putTran: tranId=" + tranId + ", putData=" + JSON.stringify(putData));
+
+        return $http.put( "/transactions/" + tranId, putData )
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.putTran: response=" + JSON.stringify(response,null,2));
+                           }, function error(response) {
+                               Logger.severe("Datastore.putTran: PUT /transactions/" + tranId + ": response=" + JSON.stringify(response)); 
+                           } );
+    };
+
+
+    return {
+        fetchTags: fetchTags,
+        fetchAccount: fetchAccount,
+        fetchAccountTrans: fetchAccountTrans,
+        fetchAccountTimeSeries: fetchAccountTimeSeries,
+        fetchAccounts: fetchAccounts,
+        fetchActiveAccounts: fetchActiveAccounts,
+        fetchNewTrans: fetchNewTrans,
+        putTran: putTran
+    };
+
+}])
+
+
+/**
+ * Date utils
+ */
+.factory( "DateUtils", [ function() {
+
+    /**
+     * @return formatted date string
+     */
+    var formatEpochAsDate = function( timestamp ) {
+        var date = new Date(timestamp);
+        var mon = "0" + (date.getMonth() + 1);
+        var day = "0" + (date.getDate());
+        var year = date.getYear() % 100;
+        // var hours = date.getHours();
+        // var minutes = "0" + date.getMinutes();
+        // var seconds = "0" + date.getSeconds();
+        return mon.substr(-2) + "/" + day.substr(-2) + "/" + year ; // + " " + hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+    };
+
+    return {
+        formatEpochAsDate: formatEpochAsDate
+    };
+}])
+
+
+/**
+ * Copied from: http://stackoverflow.com/questions/25678560/angular-passing-scope-to-ng-include
+ * For passing objects into the ng-include scope.
+ *
+ * Example:
+ * <div ng-include-template="'template.html'" ng-include-variables="{ item: 'whatever' }"></div>
+ */
+.directive('ngIncludeTemplate', [ function() {  
+  return {  
+    templateUrl: function(elem, attrs) { return attrs.ngIncludeTemplate; },  
+    restrict: 'A',  
+    scope: {  
+      'ngIncludeVariables': '&'  
+    },  
+    link: function(scope, elem, attrs) {  
+      var vars = scope.ngIncludeVariables();  
+      console.log("ngIncludeTemplate: vars=" + JSON.stringify(vars));
+      Object.keys(vars).forEach(function(key) {  
+        scope[key] = vars[key];  
+      });  
+    }  
+  }  
+}])
 
 /**
  * underscore.js support.

@@ -20,38 +20,26 @@
 </head>
 
 <body>
+    <div id="tm-page-header" class="container-fluid">
+        <div class="container">
+            <a href="/">Thinmint</a>
+        </div>
+    </div>
+
     <div class="container" ng-controller="MainController">
 
-        <div class="tm-tran-list">
+        <div class="tm-portal tm-tran-list">
             <h3>New Transactions</h3>
             <div ng-include="'templates/new-trans-table.html'">
             </div>
         </div>
 
-        <div class="tm-account-list">
+        <div class="tm-portal tm-account-list">
             <h3>Bank &amp; Credit Accounts</h3>
             <table class="table table-condensed table-hover">
-                <tr>
-                    <th class="text-right">Balance</th>
-                    <th>Account</th>
-                    <th class="text-right">7 days</th>
-                    <th class="text-right">30 days</th>
-                    <th class="text-right">90 days</th>
-                    <th class="text-right">365 days</th>
-                    <th>Updated</th>
-                </tr>
-                <tr ng-repeat="account in bankAndCreditAccounts" >
-                    <td class="text-right"
-                        tm-is-debit='{{ (account.accountType == "credit") }}' 
-                        tm-account-type="{{account.accountType}}" 
-                        ng-bind="account.currentBalance | currency"></td>
-                    <td>{{account.fiName}} - {{account.accountName}}</td>
-                    <td class="text-right" tm-is-debit='{{ account.last7days < 0 }}'>{{ account.last7days | currency }}</td>
-                    <td class="text-right" tm-is-debit='{{ account.last30days < 0 }}'>{{ account.last30days | currency }}</td>
-                    <td class="text-right" tm-is-debit='{{ account.last90days < 0 }}'>{{ account.last90days | currency }}</td>
-                    <td class="text-right" tm-is-debit='{{ account.last365days < 0 }}'>{{ account.last365days | currency }}</td>
-                    <td>{{ formatEpochAsDate(account.fiLastUpdated) }}</td>
-                </tr>
+                <tr ng-include="'templates/account-th.html'"></tr>
+                <tr ng-repeat="account in bankAndCreditAccounts" ng-include="'templates/account-tr.html'"></tr>
+
                 <tr class="tm-account-list-total">
                     <th class="text-right" tm-is-debit='{{ sumField(bankAndCreditAccounts,"value") < 0 }}'>{{ sumField(bankAndCreditAccounts,"value") | currency }}</th>
                     <th>Total</th>
@@ -64,30 +52,12 @@
             </table>
         </div>
 
-        <div class="tm-account-list">
+        <div class="tm-portal tm-account-list">
             <h3>Investment &amp; Other Accounts</h3>
             <table class="table table-condensed table-hover">
-                <tr>
-                    <th class="text-right">Balance</th>
-                    <th>Account</th>
-                    <th class="text-right">7 days</th>
-                    <th class="text-right">30 days</th>
-                    <th class="text-right">90 days</th>
-                    <th class="text-right">365 days</th>
-                    <th>Updated</th>
-                </tr>
-                <tr ng-repeat="account in investmentAccounts" >
-                    <td class="text-right"
-                        tm-is-debit='{{ (account.accountType == "credit") }}' 
-                        tm-account-type="{{account.accountType}}" 
-                        ng-bind="account.currentBalance | currency"></td>
-                    <td>{{account.fiName}} - {{account.accountName}}</td>
-                    <td class="text-right" tm-is-debit='{{ account.last7days < 0 }}'>{{ account.last7days | currency }}</td>
-                    <td class="text-right" tm-is-debit='{{ account.last30days < 0 }}'>{{ account.last30days | currency }}</td>
-                    <td class="text-right" tm-is-debit='{{ account.last90days < 0 }}'>{{ account.last90days | currency }}</td>
-                    <td class="text-right" tm-is-debit='{{ account.last365days < 0 }}'>{{ account.last365days | currency }}</td>
-                    <td>{{ formatEpochAsDate(account.fiLastUpdated) }}</td>
-                </tr>
+                <tr ng-include="'templates/account-th.html'"></tr>
+                <tr ng-repeat="account in investmentAccounts" ng-include="'templates/account-tr.html'"></tr>
+
                 <tr class="tm-account-list-total">
                     <th class="text-right" tm-is-debit='{{ sumField(investmentAccounts,"value") < 0 }}'>{{ sumField(investmentAccounts,"value") | currency }}</th>
                     <th>Total</th>
@@ -97,8 +67,9 @@
                     <th class="text-right" tm-is-debit='{{ sumField(investmentAccounts,"last365days") < 0 }}'>{{ sumField(investmentAccounts,"last365days") | currency }}</th>
                     <th></th>
                 </tr>
+
                 <tr>
-                    <td></td>
+                    <td height="50px"> </td>
                     <td></td>
                     <td></td>
                     <td></td>
@@ -106,15 +77,7 @@
                     <td></td>
                     <td></td>
                 </tr>
-                <tr>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
+
                 <tr class="tm-account-list-total">
                     <th class="text-right" tm-is-debit='{{ getNetWorth() < 0 }}'>{{ getNetWorth() | currency }}</th>
                     <th>Net worth</th>

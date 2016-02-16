@@ -124,7 +124,8 @@ var fetchAccountTrans = function( db, account, callback ) {
     var collection = db.get("transactions")
     collection.find({ 
                         "account": account.accountName,
-                        "fi": account.fiName 
+                        "fi": account.fiName,
+                        "isResolved": { "$exists": false }
                     },
                     { 
                         "sort": { "timestamp": -1 } 

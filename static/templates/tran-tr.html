@@ -1,0 +1,31 @@
+<!-- 
+    scope deps:
+        $scope.tran
+        $scope.tags
+-->
+
+<tr>
+    <td ng-bind="tran.date"></td>
+    <td tm-is-debit="{{tran.isDebit || tran.isTransfer}}" tm-is-transfer="{{tran.isTransfer}}" ng-bind="tran.amount"></td>
+    <td class="new-tran-ispending">{{ (tran.isPending) ? "(pending)" : "" }}</td>
+    <td ng-bind="tran.merchant"></td>
+    <td>{{tran.account}}</td>
+    <td class="tm-tag-list" ng-controller="TagFormController">
+        <span ng-repeat="tag in tran.tags" class="span-tag">
+            {{tag}}
+            <a class="span-tag-x" href="" ng-click="removeTag(tag)">x</a>
+        </span>
+        <form class="form-tag" ng-submit="onFormSubmit()" >
+            <input type="text" 
+                   id="input-tag-{{tran._id}}"
+                   class="input-tag form-control input-sm" 
+                   pu-elastic-input 
+                   style="min-width: 60px; max-width: 150px;"
+                   ng-model="inputTag" 
+                   tm-auto-fill="tags"
+                   placeholder="+ tag"
+                   autocomplete="off" />
+        </form>
+    </td>
+</tr>
+
