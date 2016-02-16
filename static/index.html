@@ -28,10 +28,12 @@
 
     <div class="container" ng-controller="MainController">
 
-        <div class="tm-portal tm-tran-list">
+        <div class="tm-portal">
             <h3>New Transactions</h3>
-            <div ng-include="'templates/new-trans-table.html'">
-            </div>
+            <table class="table table-condensed table-hover tm-tran-table">
+                <tr ng-include="'templates/new-tran-th.html'"></tr>
+                <tr ng-repeat="tran in newTrans" ng-include="'templates/new-tran-tr.html'"></tr>
+            </table>
         </div>
 
         <div class="tm-portal tm-account-list">

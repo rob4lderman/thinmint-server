@@ -43,12 +43,19 @@
         <div class="tm-portal">
             <h3>Time Series: Account Balance</h3>
             <div class="text-center">
-                <canvas id="myChart" width="1000" height="400"></canvas>
+                <canvas id="valueChart" width="1000" height="400"></canvas>
             </div>
         </div>
 
         <div class="tm-portal">
-            <h3>Transactions</h3>
+            <h3>Time Series: Transactions</h3>
+            <div class="text-center">
+                <canvas id="tranChart" width="1000" height="400"></canvas>
+            </div>
+        </div>
+
+        <div class="tm-portal">
+            <h3>Transactions [{{accountTrans.length}}]</h3>
             <table class="table table-condensed table-hover tm-tran-table">
                 <tr ng-include="'templates/tran-th.html'"></tr>
                 <tr ng-repeat="tran in accountTrans" ng-include="'templates/tran-tr.html'"></tr>

@@ -6,8 +6,23 @@
     line-height: 40px;
     padding: 10px 0px;
     font-weight: bold;
+    font-size: 24px;
 }
 
+a:hover {
+    text-decoration: none;
+    color: #aaa;
+}
+
+#tm-page-header a {
+    color: #664;
+}
+
+
+h3 {
+    background-color: #eff;
+    padding: 10px;
+}
 
 .form-tag {
     display: inline-block;
@@ -97,16 +112,18 @@ tr td.new-tran-ispending {
 }
 
 [tm-is-debit=true] {
-    color: inherit;
+    color: #b00;
 }
 
 [tm-is-debit=false] {
     color: #0b0
 }
 
+/**
 [tm-is-transfer=true] {
     color: #00b;
 }
+    */
 
 
 [tm-account-type=credit] {

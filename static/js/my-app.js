@@ -1,5 +1,11 @@
 angular.module( "MyApp",  ['puElasticInput'] )
 
+// TODO: tran summation
+// TODO: separate controllers for subsets of accounts? then the summation html could be ng-included.
+
+/**
+ * TODO:
+ */
 .controller( "MainController",   ["$scope", "_", "Logger", "DateUtils", "Datastore",
                          function( $scope,   _,   Logger,   DateUtils,   Datastore ) {
 
@@ -22,19 +28,16 @@ angular.module( "MyApp",  ['puElasticInput'] )
     };
 
     /**
-     * Set hasBeenAcked=true for the given tran in the db.
+     * Called when a tran is ACKed.   Remove the tran from the list.
      */
-    var ackNewTran = function(tranId) {
+    var onAckTran = function(theEvent, tranId) {
 
-        Logger.info("MainController.ackNewTran: " + tranId);
+        Logger.info("MainController.onAckTran: tranId=" + tranId);
 
         // remove it from the list locally (faster)
         $scope.newTrans = _.filter( $scope.newTrans, function(tran) { return tran._id != tranId } );
-
-        // update the db.
-        var putData = { "hasBeenAcked": true } ;
-        Datastore.putTran( tranId, putData );
     };
+
 
     /**
      * Listens for $addTranTag events.
@@ -81,13 +84,13 @@ angular.module( "MyApp",  ['puElasticInput'] )
     $scope.accounts = [];
     $scope.bankAndCreditAccounts = [];
     $scope.newTrans = [];
-    $scope.ackNewTran = ackNewTran;
     $scope.DateUtils = DateUtils;
     $scope.getNetWorth = getNetWorth;
     $scope.getNetWorthPerf = getNetWorthPerf;
     $scope.sumField = sumField;
 
     $scope.$on("$addTranTag", onAddTranTag );
+    $scope.$on("$ackTran", onAckTran);
 
     /**
      * Init data
@@ -194,6 +197,39 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
 
 /**
+ * The ACK button
+ */
+.controller( "TranAckFormController",   ["$scope", "$rootScope", "Logger", "Datastore",
+                                function( $scope,   $rootScope,   Logger,   Datastore ) {
+
+    Logger.fine("TranAckFormController: alive!");
+
+    /**
+     * Set hasBeenAcked=true for the given tran in the db.
+     */
+    var ackTran = function(tranId) {
+
+        Logger.info("TranAckFormController.ackTran: tranId=" + tranId);
+
+        // remove it from the list locally (faster)
+        // TODO: $scope.newTrans = _.filter( $scope.newTrans, function(tran) { return tran._id != tranId } );
+
+        // update the db.
+        var putData = { "hasBeenAcked": true } ;
+        Datastore.putTran( tranId, putData );
+
+        Logger.info("TranAckFormController.ackTran: $rootScope.$broadcast(event=$ackTran, tranId=" + tranId + ")");
+        $rootScope.$broadcast("$ackTran", tranId);
+    };
+
+    /**
+     * Export to scope
+     */
+    $scope.ackTran = ackTran;
+
+}])
+
+/**
  * "Auto-fill" directive
  *
  * Usage:
@@ -292,35 +328,50 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
 
 /**
- *
+ * TODO
  */
 .controller( "AccountController",   ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore",
                             function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore) {
 
     Logger.info("AccountController: alive! $location.search=" + JSON.stringify($location.search()));
 
-    // Get the context of the canvas element we want to select
-    var ctx = document.getElementById("myChart").getContext("2d");
-
     /**
-     *
+     * Render the current balance chart.
      */
-    var renderChart = function( accountTimeSeries ) {
-        Logger.fine("AccountController.renderChart: ");
+    var renderValueChart = function( accountTimeSeries ) {
+        Logger.info("AccountController.renderValueChart: ");
 
-        // Too many labels!  Pick 10 of them.
-        labels = _.pluck( accountTimeSeries, "date");
-        var i=0;
-        var nth = Math.round( labels.length / 10 );
-        Logger.fine("AccountController.renderChart: nth=" + nth + ", labels.length=" + labels.length);
-        labels = _.map( labels, function(label) { return ( i++ % nth == 0 ) ? label : "" ; } );
-        // TODO: the x-axis is a time-series, but chart.js doesn't know that, so it's not properly spaced.
-        //       maybe try google charts instead.
+        // Get all date labels from earliest tran to today
+        var fromTs = accountTimeSeries[ 0 ].timestamp * 1000;
+        var fromDate = new Date( fromTs );
+        var labels = DateUtils.createDateLabels( fromDate );
+        
+        // Get values.
+        var values = new Array(labels.length);
 
-        values = _.pluck( accountTimeSeries, "currentBalance");
+        _.each( accountTimeSeries, 
+                function(tsEntry) {
+                    var i = DateUtils.dateDiff( 'd', fromTs, tsEntry.timestamp * 1000 );
+                    values[i] = tsEntry.currentBalance;
+                } );
 
+        // Fill in the null's
+        var lastNonNullValue = 0;
+        for (var i=0; i < values.length; ++i) {
+            if (values[i] == null) {
+                values[i] = lastNonNullValue;
+            } else {
+                lastNonNullValue = values[i];
+            }
+        }
+
+        // Sample the data if we have LOTS of it
+        var sampleRate = Math.ceil(values.length / 100);
+        Logger.info("AccountController.renderValueChart: sampleRate=" + sampleRate + ", values.length=" + values.length);
+
+        // Setup data frame.
         var data = {
-            labels: labels,
+            labels: evenSample( sample(labels, sampleRate), 10 ),
             datasets: [
                 {
                     label: "My First dataset",
@@ -330,13 +381,128 @@ angular.module( "MyApp",  ['puElasticInput'] )
                     pointStrokeColor: "#fff",
                     pointHighlightFill: "#fff",
                     pointHighlightStroke: "rgba(220,220,220,1)",
+                    data: sample(values, sampleRate)
+                }
+            ]
+        };
+
+        // Get the context of the canvas element we want to select
+        var valueChartCanvas = document.getElementById("valueChart").getContext("2d");
+        var myValueChart = new Chart(valueChartCanvas).Line(data, {});
+    };
+
+    /**
+     * TODO
+     */
+    var currencyToNumber = function(currStr) {
+        return Number(currStr.replace(/[^0-9\.]+/g,""));
+    }
+
+    /**
+     * TODO
+     */
+    var evenSample = function( arr, num ) {
+        var i=0;
+        var nth = Math.round( arr.length / num );
+        Logger.fine("AccountController.evenSample: nth=" + nth + ", arr.length=" + arr.length);
+        return _.map( arr, function(item) { return ( i++ % nth == 0 ) ? item : "" ; } );
+    };
+
+    /**
+     * TODO
+     */
+    var sample = function( arr, everyNth) {
+        var retMe = [];
+        for (var i=0; i < arr.length; ++i) {
+            if (i % everyNth == 0) {
+                retMe.push(arr[i]);
+            }
+        }
+        return retMe;
+    };
+
+    /**
+     * TODO
+     */
+    var createBarColors = function( values ) {
+        var barColors = new Array(values.length);
+        for (var i=0; i < values.length; ++i) {
+            if (values[i] < 0) {
+                barColors[i] = "#b00";
+                values[i] = values[i] * -1;
+            } else {
+                barColors[i] = "#0b0";
+            }
+        }
+        return barColors;
+    };
+
+    /**
+     * Set the bar colors of the given chart.
+     */
+    var setBarColors = function(theChart, barColors) {
+        for (var i=0; i < barColors.length; ++i) {
+            theChart.datasets[0].bars[i].fillColor = barColors[i];
+        }
+        theChart.update();
+    };
+
+    /**
+     * Render the tran bar chart.
+     */
+    var renderTranChart = function( trans ) {
+        Logger.info("AccountController.renderTranChart: ");
+
+        if (trans.length == 0) {
+            return;
+        }
+
+        // Get all date labels from earliest tran to today
+        var fromTs = trans[ trans.length-1 ].timestamp * 1000;
+        var fromDate = new Date( trans[ trans.length-1 ].timestamp * 1000);
+        var labels = DateUtils.createDateLabels( fromDate );
+
+        // Get values.
+        var values = new Array(labels.length);
+        for (var i=0; i < values.length; ++i) {
+            values[i] = 0;
+        }
+
+        _.each( trans, 
+                function(tran) {
+                    var i = DateUtils.dateDiff( 'd', fromTs, tran.timestamp * 1000 );
+                    values[i] += tran.amountValue ;
+                } );
+
+        Logger.fine("AccountController.renderTranChart: values=" + JSON.stringify(values));
+
+        // Bar colors
+        var barColors = createBarColors( values );
+
+        // Setup data frame.
+        var data = {
+            labels: evenSample( labels, 10 ),
+            datasets: [
+                {
+                    label: "My First dataset",
+                    fillColor: "rgba(220,220,220,0.2)",
+                    strokeColor: "rgba(220,220,220,1)",
+                    highlightFill: "#fff",
+                    highlightStroke: "rgba(220,220,220,1)",
                     data: values
                 }
             ]
         };
 
-        var myLineChart = new Chart(ctx).Line(data, {});
+        // Get the context of the canvas element we want to select
+        var canvas = document.getElementById("tranChart").getContext("2d");
+        var myTranChart = new Chart(canvas).Bar(data, {});
+
+        setBarColors(myTranChart, barColors);
+
     };
+
+
 
     /**
      * @return the accountId from the query string.
@@ -349,21 +515,36 @@ angular.module( "MyApp",  ['puElasticInput'] )
      * Export to scope.
      */
     $scope.DateUtils = DateUtils;
+    $scope.accountTrans = [];
 
     /**
      * Go!
      */
     Datastore.fetchAccount( parseAccountIdFromLocation() )
-             .then( function success(account) { $scope.account = account; } ); 
+             .then( function success(account) { 
+                        $scope.account = account; 
+                        return account;
+                    } )
+             // Fetch account trans.
+             .then( function success(account) {
+                        var postData = { "query": { "account": account.accountName,
+                                                    "fi": account.fiName,
+                                                    "isResolved": { "$exists": false } },
+                                         "options": { "sort": { "timestamp": -1 },
+                                                      "limit": 50 } };
+                        return Datastore.fetchTrans( postData );
+                    })
+             // Render trans chart.
+             .then( function success(accountTrans) { 
+                        $scope.accountTrans = accountTrans; 
+                        renderTranChart( $scope.accountTrans);
+                    });
 
     Datastore.fetchAccountTimeSeries( parseAccountIdFromLocation() )
              .then( function success(accountTimeSeries) { 
                         $scope.accountTimeSeries = accountTimeSeries;
-                        renderChart( $scope.accountTimeSeries );
+                        renderValueChart( $scope.accountTimeSeries );
                     });
-
-    Datastore.fetchAccountTrans( parseAccountIdFromLocation() )
-             .then( function success(accountTrans) { $scope.accountTrans = accountTrans; } ); 
 
     Datastore.fetchTags()
              .then( function success(tags) { $scope.tags = tags; } ); 
@@ -473,6 +654,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
         Logger.info("Datastore.fetchAccountTrans: accountId=" + accountId);
         return $http.get( "/accounts/" + accountId + "/transactions")
                     .then( function success(response) {
+                               Logger.info( "Datastore.fetchAccountTrans: /accounts/" + accountId + "/transactions: length=" + response.data.length );
                                Logger.fine( "Datastore.fetchAccountTrans: /accounts/" + accountId + "/transactions: response=" + JSON.stringify(response));
                                return response.data;
                            }, 
@@ -525,14 +707,25 @@ angular.module( "MyApp",  ['puElasticInput'] )
         var postData = { "query": { "$or": [ { "hasBeenAcked": { "$exists": false } }, { "hasBeenAcked" : false } ] },
                          "options": { "sort": { "timestamp": -1 } } 
                        };
+        return fetchTrans( postData );
+    };
+
+    /**
+     * fetch trans
+     *
+     * @return promise
+     */
+    var fetchTrans = function( postData ) {
+        Logger.info("Datastore.fetchTrans: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions", postData )
                     .then( function success(response) {
-                               Logger.fine( "Datastore.fetchNewTrans: response=" + JSON.stringify(response,null,2));
+                               Logger.fine( "Datastore.fetchTrans: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               Logger.severe("Datastore.fetchNewTrans: POST /query/transactions: response=" + JSON.stringify(response));
+                               Logger.severe("Datastore.fetchTrans: POST /query/transactions: response=" + JSON.stringify(response));
                            } );
     };
+
 
     /**
      * PUT /transactions/{tranId}
@@ -561,6 +754,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
         fetchAccounts: fetchAccounts,
         fetchActiveAccounts: fetchActiveAccounts,
         fetchNewTrans: fetchNewTrans,
+        fetchTrans: fetchTrans,
         putTran: putTran
     };
 
@@ -570,13 +764,15 @@ angular.module( "MyApp",  ['puElasticInput'] )
 /**
  * Date utils
  */
-.factory( "DateUtils", [ function() {
+.factory( "DateUtils", [ "Logger", "dateFilter",
+                 function(Logger,   dateFilter ) {
 
     /**
+     * @param timestamp
      * @return formatted date string
      */
-    var formatEpochAsDate = function( timestamp ) {
-        var date = new Date(timestamp);
+    var formatEpochAsDate = function( timestamp_ms ) {
+        var date = new Date(timestamp_ms);
         var mon = "0" + (date.getMonth() + 1);
         var day = "0" + (date.getDate());
         var year = date.getYear() % 100;
@@ -584,10 +780,64 @@ angular.module( "MyApp",  ['puElasticInput'] )
         // var minutes = "0" + date.getMinutes();
         // var seconds = "0" + date.getSeconds();
         return mon.substr(-2) + "/" + day.substr(-2) + "/" + year ; // + " " + hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+
+    };
+    
+    var formatDateLabel = function( d ) {
+        return dateFilter(d, "M/d/yy");
+        // return d.toLocaleFormat('%m.%d.%y');
+    };
+
+    /**
+     * @param datepart 'y', 'w', 'd', 'h', 'm', 's'
+     */
+    var dateDiff = function(datepart, fromdate, todate) {	
+        datepart = datepart.toLowerCase();	
+        var diff = todate - fromdate;	
+        var divideBy = { w:604800000, 
+                         d:86400000, 
+                         h:3600000, 
+                         m:60000, 
+                         s:1000 };	
+        return Math.floor( diff/divideBy[datepart]);
+    };
+
+    /**
+     * @param timestamp_s
+     */
+    var createDateLabels_s = function( timestamp_s ) {
+        return createDateLabels( new Date(timestamp_s * 1000) );
+    }
+
+    /**
+     * @param fromDate
+     * @return an array of date labels between fromDate and today
+     */
+    var createDateLabels = function( fromDate ) {
+
+        var today = new Date();
+        var daysBetween = dateDiff('d', fromDate, today);
+
+        Logger.info("DateUtils.createDateLabels: fromDate=" + formatDateLabel(fromDate) 
+                                            + ", today=" + formatDateLabel(today) 
+                                            + ", daysBetween=" + daysBetween );
+
+        var retMe = new Array(daysBetween);
+
+        for (var i=0; i < daysBetween; ++i) {
+            retMe[i] = formatDateLabel( fromDate );
+            fromDate.setDate( fromDate.getDate() + 1);
+        }
+
+        Logger.fine("DateUtils.createDateLabels: retMe=" + JSON.stringify(retMe));
+        return retMe;
+
     };
 
     return {
-        formatEpochAsDate: formatEpochAsDate
+        createDateLabels: createDateLabels,
+        formatEpochAsDate: formatEpochAsDate,
+        dateDiff: dateDiff
     };
 }])
 
