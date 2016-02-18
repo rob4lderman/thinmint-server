@@ -6,8 +6,8 @@ angular.module( "MyApp",  ['puElasticInput'] )
 /**
  * TODO:
  */
-.controller( "MainController",   ["$scope", "_", "Logger", "DateUtils", "Datastore",
-                         function( $scope,   _,   Logger,   DateUtils,   Datastore ) {
+.controller( "MainController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "MiscUtils",
+                         function( $scope,   _,   Logger,   DateUtils,   Datastore,   MiscUtils ) {
 
     Logger.info("MainController: alive!");
 
@@ -54,13 +54,14 @@ angular.module( "MyApp",  ['puElasticInput'] )
      * @return net worth (sum of value for all $scope.accounts)
      */
     var sumField = function(accounts, fieldName) {
-        var retMe = _.reduce(accounts, 
-                             function(memo, account) { 
-                                 return memo + account[fieldName]
-                             }, 
-                             0);
-        Logger.fine("MainController.sumField: fieldName=" + fieldName + ": " + retMe);
-        return retMe;
+        return MiscUtils.sumField(accounts, fieldName);
+        // -rx- var retMe = _.reduce(accounts, 
+        // -rx-                      function(memo, account) { 
+        // -rx-                          return memo + account[fieldName]
+        // -rx-                      }, 
+        // -rx-                      0);
+        // -rx- Logger.fine("MainController.sumField: fieldName=" + fieldName + ": " + retMe);
+        // -rx- return retMe;
     };
 
     /**
@@ -328,14 +329,15 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
 
 /**
- * TODO
+ * Controller for account.html.
  */
-.controller( "AccountController",   ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore",
-                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore) {
+.controller( "AccountController",   ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "ChartUtils", "MiscUtils",
+                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   ChartUtils,   MiscUtils) {
 
     Logger.info("AccountController: alive! $location.search=" + JSON.stringify($location.search()));
 
     /**
+     * TODO: chart rendering shoudl be done in directive? (since it access the DOM)
      * Render the current balance chart.
      */
     var renderValueChart = function( accountTimeSeries ) {
@@ -355,7 +357,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
                     values[i] = tsEntry.currentBalance;
                 } );
 
-        // Fill in the null's
+        // Fill in the null's by carrying forward the previous non-null value
         var lastNonNullValue = 0;
         for (var i=0; i < values.length; ++i) {
             if (values[i] == null) {
@@ -366,12 +368,26 @@ angular.module( "MyApp",  ['puElasticInput'] )
         }
 
         // Sample the data if we have LOTS of it
-        var sampleRate = Math.ceil(values.length / 100);
-        Logger.info("AccountController.renderValueChart: sampleRate=" + sampleRate + ", values.length=" + values.length);
+        // We may have lots of dates (labels.length), but not a lot of actual data points (accountTimeSeries.length)
+        // We don't want MORE than 100 data points (slows down the chart).
+        // So if there's MORE than 100, divide by 100 (50?) to get the sampleRate (everyNth record is sampled)
+        // If there's LESS than 100, then we want to sample exactly as many entries as there are.
+        // So if there's 20 entries, we want to sample 20 values out of (values.length), evenly: sampleRate = (values.length / 20)
+        // sampleRate = values.length / # of data points
+        // values.length / sampleRate = # of data points
+        // # of data points should never > 100
+        
+        // TODO: include the first and last datapoint in the sample (first is always included... last not always).
+
+        var sampleRate = Math.ceil( values.length / Math.min( accountTimeSeries.length, 100 )  );
+
+        Logger.info("AccountController.renderValueChart: sampleRate=" + sampleRate 
+                                                    + ", values.length=" + values.length
+                                                    + ", accountTimeSeries.length=" + accountTimeSeries.length);
 
         // Setup data frame.
         var data = {
-            labels: evenSample( sample(labels, sampleRate), 10 ),
+            labels: ChartUtils.sampleEvenlyAndReplace( ChartUtils.sampleEveryNth(labels, sampleRate), 10, "" ),
             datasets: [
                 {
                     label: "My First dataset",
@@ -381,7 +397,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
                     pointStrokeColor: "#fff",
                     pointHighlightFill: "#fff",
                     pointHighlightStroke: "rgba(220,220,220,1)",
-                    data: sample(values, sampleRate)
+                    data: ChartUtils.sampleEveryNth(values, sampleRate)
                 }
             ]
         };
@@ -389,62 +405,6 @@ angular.module( "MyApp",  ['puElasticInput'] )
         // Get the context of the canvas element we want to select
         var valueChartCanvas = document.getElementById("valueChart").getContext("2d");
         var myValueChart = new Chart(valueChartCanvas).Line(data, {});
-    };
-
-    /**
-     * TODO
-     */
-    var currencyToNumber = function(currStr) {
-        return Number(currStr.replace(/[^0-9\.]+/g,""));
-    }
-
-    /**
-     * TODO
-     */
-    var evenSample = function( arr, num ) {
-        var i=0;
-        var nth = Math.round( arr.length / num );
-        Logger.fine("AccountController.evenSample: nth=" + nth + ", arr.length=" + arr.length);
-        return _.map( arr, function(item) { return ( i++ % nth == 0 ) ? item : "" ; } );
-    };
-
-    /**
-     * TODO
-     */
-    var sample = function( arr, everyNth) {
-        var retMe = [];
-        for (var i=0; i < arr.length; ++i) {
-            if (i % everyNth == 0) {
-                retMe.push(arr[i]);
-            }
-        }
-        return retMe;
-    };
-
-    /**
-     * TODO
-     */
-    var createBarColors = function( values ) {
-        var barColors = new Array(values.length);
-        for (var i=0; i < values.length; ++i) {
-            if (values[i] < 0) {
-                barColors[i] = "#b00";
-                values[i] = values[i] * -1;
-            } else {
-                barColors[i] = "#0b0";
-            }
-        }
-        return barColors;
-    };
-
-    /**
-     * Set the bar colors of the given chart.
-     */
-    var setBarColors = function(theChart, barColors) {
-        for (var i=0; i < barColors.length; ++i) {
-            theChart.datasets[0].bars[i].fillColor = barColors[i];
-        }
-        theChart.update();
     };
 
     /**
@@ -468,20 +428,22 @@ angular.module( "MyApp",  ['puElasticInput'] )
             values[i] = 0;
         }
 
+        // Aggregate tran amounts on a per-day basis
         _.each( trans, 
                 function(tran) {
                     var i = DateUtils.dateDiff( 'd', fromTs, tran.timestamp * 1000 );
                     values[i] += tran.amountValue ;
                 } );
 
-        Logger.fine("AccountController.renderTranChart: values=" + JSON.stringify(values));
 
-        // Bar colors
-        var barColors = createBarColors( values );
+        var barColors = ChartUtils.createBarColors( values );       // red and green bar colors
+        values = _.map(values, function(val) { return Math.abs(val); } );   // absolute values
+
+        Logger.fine("AccountController.renderTranChart: values=" + JSON.stringify(values));
 
         // Setup data frame.
         var data = {
-            labels: evenSample( labels, 10 ),
+            labels: ChartUtils.sampleEvenlyAndReplace( labels, 10, "" ),
             datasets: [
                 {
                     label: "My First dataset",
@@ -498,10 +460,8 @@ angular.module( "MyApp",  ['puElasticInput'] )
         var canvas = document.getElementById("tranChart").getContext("2d");
         var myTranChart = new Chart(canvas).Bar(data, {});
 
-        setBarColors(myTranChart, barColors);
-
+        ChartUtils.setBarColors(myTranChart, barColors);
     };
-
 
 
     /**
@@ -512,10 +472,58 @@ angular.module( "MyApp",  ['puElasticInput'] )
     }
 
     /**
+     * The "more" button ng-click.
+     * Fetch the next page of trans.
+     */
+    var fetchNextPage = function() {
+        Logger.fine("AccountController.fetchNextPage: $scope.page=" + $scope.page);
+        $scope.page += 1;
+        fetchTransByPage( $scope.account, $scope.page, $scope.pageSize )
+            .then( appendTrans )
+            .then( renderTranChart );
+    }
+
+    /**
+     * @return promise fulfilled with trans
+     */
+    var fetchTransByPage = function(account, page, pageSize) {
+        var postData = { "query": { "account": account.accountName,
+                                    "fi": account.fiName,
+                                    "isResolved": { "$exists": false } },
+                         "options": { "sort": { "timestamp": -1 },
+                                      "limit": pageSize,
+                                      "skip": page * pageSize} };
+        return Datastore.fetchTrans( postData );
+    };
+
+    /**
+     * @return  $scope.accountTrans, after being appended by the given trans.
+     */
+    var appendTrans = function(trans) {
+
+        Array.prototype.push.apply( $scope.accountTrans, trans); 
+
+        $scope.accountTransSumAmountValue = MiscUtils.sumField( $scope.accountTrans, "amountValue" );
+
+        // Mark "areAllTransFetched" = true, which will hid the "more" button.
+        if (trans.length < $scope.pageSize) {
+            $scope.areAllTransFetched = true;
+        }
+
+        Logger.info("AccountController.appendTrans: areAllTransFetched=" + $scope.areAllTransFetched);
+        return $scope.accountTrans;
+    };
+
+    /**
      * Export to scope.
      */
     $scope.DateUtils = DateUtils;
     $scope.accountTrans = [];
+    $scope.fetchNextPage = fetchNextPage;
+    $scope.areAllTransFetched = false;
+    // Technically these don't need to be put in $scope since they're not used by the view.
+    $scope.page = 0;
+    $scope.pageSize = 50;
 
     /**
      * Go!
@@ -527,18 +535,12 @@ angular.module( "MyApp",  ['puElasticInput'] )
                     } )
              // Fetch account trans.
              .then( function success(account) {
-                        var postData = { "query": { "account": account.accountName,
-                                                    "fi": account.fiName,
-                                                    "isResolved": { "$exists": false } },
-                                         "options": { "sort": { "timestamp": -1 },
-                                                      "limit": 50 } };
-                        return Datastore.fetchTrans( postData );
+                        return fetchTransByPage( account, $scope.page, $scope.pageSize );
                     })
+             // Append trans to scope.
+             .then( appendTrans )
              // Render trans chart.
-             .then( function success(accountTrans) { 
-                        $scope.accountTrans = accountTrans; 
-                        renderTranChart( $scope.accountTrans);
-                    });
+             .then( renderTranChart );
 
     Datastore.fetchAccountTimeSeries( parseAccountIdFromLocation() )
              .then( function success(accountTimeSeries) { 
@@ -576,6 +578,19 @@ angular.module( "MyApp",  ['puElasticInput'] )
         severe: severe
     };
 
+}])
+
+
+
+/**
+ * Controller for trans.html.
+ */
+.controller( "TranQueryController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore",
+                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore) {
+
+    Logger.info("TranQueryController: Alive!");
+
+    // TODO
 }])
 
 
@@ -762,6 +777,125 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
 
 /**
+ * TODO: put various stuff in here until better homes can be found.
+ *       like an orphanage.  or Foster care.
+ */
+.factory( "MiscUtils", [ "Logger", 
+                 function(Logger) {
+
+    /**
+     * @return the givn currency string convered to a number.
+     */
+    var currencyToNumber = function(currStr) {
+        return Number(currStr.replace(/[^0-9\.]+/g,""));
+    }
+
+    /**
+     * @return net worth (sum of value for all $scope.accounts)
+     */
+    var sumField = function(objs, fieldName) {
+        var retMe = _.reduce(objs, 
+                             function(memo, obj) { 
+                                 return memo + obj[fieldName]
+                             }, 
+                             0);
+        Logger.fine("MiscUtils.sumField: fieldName=" + fieldName + ": " + retMe);
+        return retMe;
+    };
+
+    return {
+        currencyToNumber: currencyToNumber,
+        sumField: sumField
+    };
+}])
+
+
+/**
+ * Chart utils.
+ */
+.factory( "ChartUtils", [ function() {
+
+    /**
+     * @return a new array, same size as the given array, with at most num elements
+     *         sampled evenly (i.e. every (arr.length/num)'th element) from the given array.
+     *         All other non-sampled values are replaced with replaceValue.
+     */
+    var sampleEvenlyAndReplace = function( arr, num, replaceValue ) {
+        return sampleEveryNthAndReplace(arr, Math.ceil( arr.length / num ), replaceValue);
+    };
+
+    /**
+     * @return a new array, same size as the given array, where everyNth element 
+     *         is copied over from the given array to the returned array, and every
+     *         other element in between is replaced with the given replaceValue 
+     *         Note: the first element is always copied over.
+     */
+    var sampleEveryNthAndReplace = function( arr, everyNth, replaceValue) {
+        var retMe = new Array(arr.length);
+        for (var i=0; i < arr.length; ++i) {
+            if (i % everyNth == 0) {
+                retMe[i] = arr[i];
+            } else {
+                retMe[i] = replaceValue;
+            }
+        }
+        return retMe;
+    };
+
+    /**
+     * @return a new array containing everyNth element from the given array.
+     *         Note: the first element is always included.
+     */
+    var sampleEveryNth = function( arr, everyNth) {
+        var retMe = [];
+        for (var i=0; i < arr.length; ++i) {
+            if (i % everyNth == 0) {
+                retMe.push(arr[i]);
+            }
+        }
+        return retMe;
+    };
+
+    /**
+     * @return an array of bar colors based on the given values.
+     *         if value < 0, barcolor=red; else barcolor=green
+     */
+    var createBarColors = function( values ) {
+        var barColors = new Array(values.length);
+        for (var i=0; i < values.length; ++i) {
+            if (values[i] < 0) {
+                barColors[i] = "#b00";
+            } else {
+                barColors[i] = "#0b0";
+            }
+        }
+        return barColors;
+    };
+
+    /**
+     * Set the bar colors of the given chart.
+     */
+    var setBarColors = function(theChart, barColors) {
+        for (var i=0; i < barColors.length; ++i) {
+            theChart.datasets[0].bars[i].fillColor = barColors[i];
+        }
+        theChart.update();
+    };
+
+    /**
+     * Export
+     */
+    return {
+        sampleEvenlyAndReplace: sampleEvenlyAndReplace,
+        sampleEveryNthAndReplace: sampleEveryNthAndReplace,
+        sampleEveryNth: sampleEveryNth,
+        createBarColors: createBarColors,
+        setBarColors: setBarColors
+    };
+}])
+
+
+/**
  * Date utils
  */
 .factory( "DateUtils", [ "Logger", "dateFilter",
@@ -824,7 +958,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
         var retMe = new Array(daysBetween);
 
-        for (var i=0; i < daysBetween; ++i) {
+        for (var i=0; i <= daysBetween; ++i) {
             retMe[i] = formatDateLabel( fromDate );
             fromDate.setDate( fromDate.getDate() + 1);
         }

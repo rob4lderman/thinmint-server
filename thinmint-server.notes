@@ -1,6 +1,13 @@
 
-TODO: tran query page (filter by account, by tag, by merchant?, by amount range?)
-TODO: javascript charts!!!
+
+TODO: tran query page (filter by account, by tag, by merchant?, by date range, by amount range?)
+      tags: clothes + ilana - gift  ==>  tags.contains(clothes) and tags.contains(ilana) and !tags.contains(gift)
+      tags: clothes and ilana or not gift  ==>  tags.contains(clothes) and tags.contains(ilana) and !tags.contains(gift)
+      merchant: like "amazon" 
+      date: after 01/01/16 and before 02/02/16
+      amount: over 30.00 or under 10
+
+done: javascript charts!!!
 
 
 done: match up pending trans with completed trans  (cross ref via linkedTranIds field)
@@ -21,10 +28,7 @@ TODO: match up transfers (e.g. CC payments with CHECKING account checks, SAVINGS
 
 TODO: account "nickname" - display in trans
 
-TODO: compute back performance 
-
-
-TODO: account balance including pending (non-completed) trans
+TODO: don't create a new accountsTimeSeries record if the balance hasn't changed since the last one.
 
 TODO: auto-tagging
         match tags by omerchant
@@ -33,7 +37,8 @@ TODO: auto-tagging
 TODO: all investments trans have txnType=1, everything else txnType=0
       technically this is "income" too... 
 
-TODO: clean up unused tags
+TODO: clean up unused tags (python)
+
 
 ===================================================================================================
 CURL commands:

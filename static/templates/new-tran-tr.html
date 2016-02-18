@@ -11,7 +11,7 @@
         </form>
     </td>
     <td ng-bind="tran.date"></td>
-    <td tm-is-debit="{{tran.isDebit || tran.isTransfer}}" tm-is-transfer="{{tran.isTransfer}}" ng-bind="tran.amount"></td>
+    <td class="text-right" tm-is-debit="{{tran.isDebit}}" tm-is-transfer="{{tran.isTransfer}}" ng-bind="tran.amount"></td>
     <td class="new-tran-ispending">{{ (tran.isPending) ? "(pend)" : "" }}</td>
     <td ng-bind="tran.merchant"></td>
     <td>{{tran.account}}</td>

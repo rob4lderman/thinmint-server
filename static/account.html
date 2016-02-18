@@ -55,13 +55,27 @@
         </div>
 
         <div class="tm-portal">
-            <h3>Transactions [{{accountTrans.length}}]</h3>
+            <h3>Transactions [{{accountTrans.length}} of xx]</h3>
             <table class="table table-condensed table-hover tm-tran-table">
                 <tr ng-include="'templates/tran-th.html'"></tr>
                 <tr ng-repeat="tran in accountTrans" ng-include="'templates/tran-tr.html'"></tr>
+
+                <tr class="tm-list-totals">
+                    <th></th>
+                    <th class="text-right" tm-is-debit="{{ accountTransSumAmountValue < 0 }}" >{{accountTransSumAmountValue | currency}}</th>
+                    <th></th>    <!-- pending -->
+                    <th>Total</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+
             </table>
+            <button ng-if="!areAllTransFetched" class="btn btn-info btn-sm" ng-click="fetchNextPage()">more</button>
         </div>
 
+    </div>
+
+    <div id="tm-page-footer" class="container-fluid">
     </div>
 
 </body>

@@ -1,0 +1,46 @@
+<!DOCTYPE html/>
+<html ng-app="MyApp">
+
+<head>
+    <!-- Note: load JS after html to improve rendering time -->
+    <!-- script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular.min.js"></script -->
+    <script src="js/angular-1.5.0.js"></script>
+    <!-- script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore.js"></script -->
+    <script src="js/underscore.js"></script>
+
+    <script src="js/Chart.js"></script>
+
+    <!-- load app module _after_ angular (otherwise you'll get 'angular not defined') -->
+    <script src="js/angular-elastic-input.min.js"></script>
+    <script src="js/my-app.js"></script>
+
+    <!-- bootstrap -->
+    <!-- link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous" -->
+    <!-- link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.css" -->
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <link rel="stylesheet" href="css/my-app.css">
+</head>
+
+<body>
+    <div id="tm-page-header" class="container-fluid">
+        <div class="container">
+            <a href="/">Thinmint</a>
+        </div>
+    </div>
+
+    <div class="container" ng-controller="TranQueryController">
+
+
+        <div class="tm-portal">
+            <h3>Transactions [{{trans.length}}]</h3>
+            <table class="table table-condensed table-hover tm-tran-table">
+                <tr ng-include="'templates/tran-th.html'"></tr>
+                <tr ng-repeat="tran in trans" ng-include="'templates/tran-tr.html'"></tr>
+            </table>
+        </div>
+
+    </div>
+
+</body>
+</html>
+

@@ -33,6 +33,17 @@
             <table class="table table-condensed table-hover tm-tran-table">
                 <tr ng-include="'templates/new-tran-th.html'"></tr>
                 <tr ng-repeat="tran in newTrans" ng-include="'templates/new-tran-tr.html'"></tr>
+
+                <tr class="tm-list-totals">
+                    <th></th>
+                    <th></th>
+                    <th class="text-right" tm-is-debit="{{ sumField(newTrans, 'amountValue') < 0 }}" >{{sumField(newTrans, 'amountValue') | currency}}</th>
+                    <th></th>    <!-- pending -->
+                    <th>Total</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+
             </table>
         </div>
 
