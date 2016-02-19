@@ -5,11 +5,6 @@
 
 -->
 <tr>
-    <td>
-        <form class="div-tags div-ack" ng-controller="TranAckFormController" >
-            <button class="btn btn-info btn-sm" ng-click="ackTran(tran._id)">ack</button>
-        </form>
-    </td>
     <td ng-bind="tran.date"></td>
     <td class="text-right" tm-is-debit="{{tran.isDebit}}" tm-is-transfer="{{tran.isTransfer}}" ng-bind="tran.amount"></td>
     <td class="new-tran-ispending">{{ (tran.isPending) ? "(pend)" : "" }}</td>
@@ -23,13 +18,18 @@
         <form class="form-tag" ng-submit="onFormSubmit()" >
             <input type="text" 
                    id="input-tag-{{tran._id}}"
-                   class="input-tag form-control input-sm" 
+                   class="tm-input-tag form-control input-sm" 
                    pu-elastic-input 
                    style="min-width: 60px; max-width: 150px;"
                    ng-model="inputTag" 
                    tm-auto-fill="tags"
                    placeholder="+"
                    autocomplete="off" />
+        </form>
+    </td>
+    <td>
+        <form class="div-ack" ng-controller="TranAckFormController" >
+            <button class="btn btn-info btn-sm" ng-click="ackTran(tran._id)">ack</button>
         </form>
     </td>
 </tr>

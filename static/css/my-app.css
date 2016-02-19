@@ -5,7 +5,6 @@
     background-color: #cfd;
     line-height: 40px;
     padding: 10px 0px;
-    font-weight: bold;
     font-size: 24px;
 }
 
@@ -13,28 +12,50 @@
     height: 60px;
 }
 
+a:focus {
+    text-decoration: none;
+}
 
-a:hover {
+
+a:hover, #tm-page-header a:hover {
     text-decoration: none;
     color: #aaa;
 }
 
 #tm-page-header a {
     color: #664;
+    margin: 0 40px 0 0;
 }
 
 
-h3 {
+.tm-show-tags-list {
+    line-height: 24px;
+    margin-bottom: 20px;
+    border-bottom: solid 1px #ddd;
+    padding-bottom: 5px;
+}
+
+h3, h4 {
     background-color: #eff;
     padding: 10px;
 }
 
-.tm-portal h3:first-child {
+.tm-portal h3:first-child, .tm-portal h4:first-child {
     margin-top: 0px;
+}
+
+.tm-datepicker-hyphen {
+    padding: 0 5 0 20px;
+}
+
+
+.tm-datepicker-button {
+    margin-left: 20px;
 }
 
 .form-tag {
     display: inline-block;
+    margin-bottom: 0px;
 }
 
 .tm-tran-table .form-tag {
@@ -49,16 +70,16 @@ h3 {
      border-top: none !important; 
  }
 
-.div-tags form {
-    margin-bottom: 0px;
+.tm-input-tag {
+    margin: 0 4px;
 }
 
-
-.div-tags input, .tm-tag-list input {
+.tm-tag-list input {
     border: none;
     box-shadow: none;
     display: inline;
     height: 20px;
+    margin: 0 4px;
 }
 
 .tm-tran-table .tm-tag-list {
@@ -66,8 +87,8 @@ h3 {
 }
 
 
+/* 
 tr.div-tags td.tm-tag-list {
-    /* to align it with the .div-tags <input> */
     line-height: 20px;
 }
 
@@ -75,6 +96,7 @@ tr.div-tags td {
     padding-top: 0px !important;
     padding-bottom: 10px !important;
 }
+    */
 
 .div-ack {
     text-align: center;
@@ -146,6 +168,14 @@ tr td.new-tran-ispending {
     margin-top: 40px;
 }
 
+form.tm-portal {
+    margin-bottom: 0px;
+    overflow: hidden;
+}
+
+form.tm-portal button {
+    margin-top: 5px;
+}
 
 .tm-account-list [tm-is-debit=true] {
     color: #b00;
@@ -156,12 +186,21 @@ tr.tm-account-list-total tr.tm-list-totals {
     border-top: solid 2px black;
 }
 
+.tm-tag-filter-list {
+    padding-bottom: 10px;
+}
+
+
+.tm-md-autocomplete {
+    width: 85%;
+    float: left;
+}
 
 span.span-tag {
     background-color: #9b9;
     color: white;
-    padding: 1px 4px;
-    margin: 1px;
+    padding: 2px 4px;
+    margin: 2px;
     border-radius: 4px;
     /* white-space: nowrap; */
 }

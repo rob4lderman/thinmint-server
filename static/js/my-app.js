@@ -1,15 +1,13 @@
-angular.module( "MyApp",  ['puElasticInput'] )
-
-// TODO: tran summation
-// TODO: separate controllers for subsets of accounts? then the summation html could be ng-included.
+angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
 /**
- * TODO:
+ * TODO: separate controllers for subsets of accounts? then the summation html could be ng-included.
+ *
  */
-.controller( "MainController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "MiscUtils",
-                         function( $scope,   _,   Logger,   DateUtils,   Datastore,   MiscUtils ) {
+.controller( "AccountSummaryController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "MiscUtils",
+                                   function( $scope,   _,   Logger,   DateUtils,   Datastore,   MiscUtils ) {
 
-    Logger.info("MainController: alive!");
+    Logger.info("AccountSummaryController: alive!");
 
     /**
      * Set $scope.accounts 
@@ -21,33 +19,24 @@ angular.module( "MyApp",  ['puElasticInput'] )
                                                  function(account) { 
                                                      return account.accountType == "credit" || account.accountType == "bank";
                                                  } );
+        setAccountSums($scope.bankAndCreditAccountsSums, $scope.bankAndCreditAccounts);
+
         $scope.investmentAccounts = _.filter( $scope.accounts, 
                                                  function(account) { 
                                                      return ! (account.accountType == "credit" || account.accountType == "bank");
                                                  } );
+        setAccountSums($scope.investmentAccountsSums, $scope.investmentAccounts);
     };
 
     /**
-     * Called when a tran is ACKed.   Remove the tran from the list.
+     * TODO
      */
-    var onAckTran = function(theEvent, tranId) {
-
-        Logger.info("MainController.onAckTran: tranId=" + tranId);
-
-        // remove it from the list locally (faster)
-        $scope.newTrans = _.filter( $scope.newTrans, function(tran) { return tran._id != tranId } );
-    };
-
-
-    /**
-     * Listens for $addTranTag events.
-     */
-    var onAddTranTag = function(theEvent, tag) {
-        Logger.info("MainController.onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
-
-        if ( ! _.contains($scope.tags, tag) ) {
-            $scope.tags.push(tag);
-        }
+    var setAccountSums = function( sums, accounts ) {
+        // Set sum totals.
+        _.each( ["value", "last7days", "last30days", "last90days", "last365days" ],
+                function(fieldName) {
+                    sums[fieldName] = sumField( accounts, fieldName );
+                } );
     };
 
     /**
@@ -55,13 +44,6 @@ angular.module( "MyApp",  ['puElasticInput'] )
      */
     var sumField = function(accounts, fieldName) {
         return MiscUtils.sumField(accounts, fieldName);
-        // -rx- var retMe = _.reduce(accounts, 
-        // -rx-                      function(memo, account) { 
-        // -rx-                          return memo + account[fieldName]
-        // -rx-                      }, 
-        // -rx-                      0);
-        // -rx- Logger.fine("MainController.sumField: fieldName=" + fieldName + ": " + retMe);
-        // -rx- return retMe;
     };
 
     /**
@@ -78,50 +60,93 @@ angular.module( "MyApp",  ['puElasticInput'] )
         return sumField( $scope.accounts, fieldName);
     };
 
-
     /**
      * Export to $scope
      */
     $scope.accounts = [];
     $scope.bankAndCreditAccounts = [];
-    $scope.newTrans = [];
+    $scope.bankAndCreditAccountsSums = {};
+    $scope.investmentAccounts = {};
+    $scope.investmentAccountsSums = {};
     $scope.DateUtils = DateUtils;
     $scope.getNetWorth = getNetWorth;
     $scope.getNetWorthPerf = getNetWorthPerf;
     $scope.sumField = sumField;
-
-    $scope.$on("$addTranTag", onAddTranTag );
-    $scope.$on("$ackTran", onAckTran);
 
     /**
      * Init data
      */
     Datastore.fetchActiveAccounts().then( setAccounts );
 
-    Datastore.fetchNewTrans()
-             .then( function success(newTrans) { $scope.newTrans = newTrans; } ); 
+}])
 
+
+/**
+ * NewTransController
+ */
+.controller( "NewTransController",   ["$scope", "_", "Logger", "Datastore", "MiscUtils",
+                             function( $scope,   _,   Logger,   Datastore,   MiscUtils ) {
+
+    Logger.info("NewTransController: alive!");
+
+    /**
+     * Called when a tran is ACKed.   Remove the tran from the list.
+     */
+    var onAckTran = function(theEvent, tranId) {
+
+        Logger.info("NewTransController.onAckTran: tranId=" + tranId);
+
+        // remove it from the list locally (faster)
+        $scope.newTrans = _.filter( $scope.newTrans, function(tran) { return tran._id != tranId } );
+    };
+
+    /**
+     * Listens for $addTranTag events.
+     */
+    var onAddTranTag = function(theEvent, tag) {
+        Logger.info("NewTransController.onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
+
+        if ( ! _.contains($scope.tags, tag) ) {
+            $scope.tags.push(tag);
+        }
+    };
+
+    /**
+     * Export to $scope
+     */
+    $scope.newTrans = [];
+    $scope.sumField = MiscUtils.sumField;
+
+    $scope.$on("$addTranTag", onAddTranTag );
+    $scope.$on("$ackTran", onAckTran);
+
+    $scope.thinking = true;
+
+    /**
+     * Init data
+     */
+    Datastore.fetchNewTrans()
+             .then( function success(newTrans) { 
+                        $scope.thinking = false;
+                        $scope.newTrans = newTrans; 
+                    } ); 
+
+    // Populate tags for auto-fill.
     Datastore.fetchTags()
              .then( function success(tags) { $scope.tags = tags; } ); 
 
 }])
 
 
+
 /**
  * ng-controller for tran tagging <form>(s).
  * There's one of these controllers for each tran ($scope.tran).
  */
-.controller( "TagFormController",   ["$scope", "_", "$rootScope", "Logger", "Datastore",
-                            function( $scope,   _ ,  $rootScope,   Logger,   Datastore) {
+.controller( "TagFormController",   ["$scope", "_", "$rootScope", "Logger", "Datastore", "MiscUtils",
+                            function( $scope,   _ ,  $rootScope,   Logger,   Datastore,   MiscUtils) {
 
     Logger.fine("TagFormController: alive!: $scope.tran=" + $scope.tran.amount);
-
-    /**
-     * @return true if the given string is null or empty
-     */
-    var isEmpty = function(s) {
-        return angular.isUndefined(s) || !s || s.trim().length == 0;
-    }
 
     /**
      * PUT the tag updates to the db.
@@ -138,12 +163,12 @@ angular.module( "MyApp",  ['puElasticInput'] )
     var addTranTag = function(tag) {
 
         // Clear the auto-complete list and the input field.
-        $scope.filteredTags = [];   
+        // -rx- $scope.filteredTags = [];   
         $scope.inputTag = "";
 
         tag = (tag || "").trim();
 
-        if (isEmpty(tag)) {
+        if (MiscUtils.isEmpty(tag)) {
             return;
         }
 
@@ -192,7 +217,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
     /**
      * Init data.
      */
-    $scope.filteredTags = [];
+    // -rx- $scope.filteredTags = [];
 
 }])
 
@@ -211,9 +236,6 @@ angular.module( "MyApp",  ['puElasticInput'] )
     var ackTran = function(tranId) {
 
         Logger.info("TranAckFormController.ackTran: tranId=" + tranId);
-
-        // remove it from the list locally (faster)
-        // TODO: $scope.newTrans = _.filter( $scope.newTrans, function(tran) { return tran._id != tranId } );
 
         // update the db.
         var putData = { "hasBeenAcked": true } ;
@@ -249,16 +271,27 @@ angular.module( "MyApp",  ['puElasticInput'] )
         require: "ngModel",
         link: function($scope, element, attrs, ngModel) {
 
-                  var fillStringList = $parse(attrs.tmAutoFill)($scope);
-                  Logger.fine("directive::tmAutoFill.link: fillStringList=" + JSON.stringify(fillStringList));
+                  // -rx- var fillStringList = $parse(attrs.tmAutoFill)($scope);
+                  Logger.info("tmAutoFill.link: entry");
 
+                  /**
+                   *
+                   */
                   var fillAndSelect = function( element, fillText ) {
                         var typedTextLen = element.val().length;
                         element.val( fillText );
                         element[0].setSelectionRange( typedTextLen , fillText.length );
                   };
 
+                  /**
+                   *
+                   */
                   var autofill = function(element) {
+                      var fillStringList = $parse(attrs.tmAutoFill)($scope);
+
+                      Logger.info("tmAutoFill.autofill: element.val()=" + element.val()
+                                                      + ", fillStringList=" + JSON.stringify(fillStringList));
+
                       var fillStrings = _.filter( fillStringList, function(fillString) { return fillString.startsWith( element.val() ); } );
 
                       if (fillStrings.length > 0) {
@@ -266,12 +299,10 @@ angular.module( "MyApp",  ['puElasticInput'] )
                       }
                   };
 
+                  /**
+                   *
+                   */
                   element.on("input", function(event) {
-                      Logger.fine("directive::tmAutoFill.oninput: "
-                                        + "element.val()=" + element.val()
-                                        + ", fillStringList=" + JSON.stringify(fillStringList)
-                                       );
-
                       autofill( element );
                   });
 
@@ -345,8 +376,7 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
         // Get all date labels from earliest tran to today
         var fromTs = accountTimeSeries[ 0 ].timestamp * 1000;
-        var fromDate = new Date( fromTs );
-        var labels = DateUtils.createDateLabels( fromDate );
+        var labels = DateUtils.createDateLabels( new Date(fromTs), new Date() );
         
         // Get values.
         var values = new Array(labels.length);
@@ -408,63 +438,6 @@ angular.module( "MyApp",  ['puElasticInput'] )
     };
 
     /**
-     * Render the tran bar chart.
-     */
-    var renderTranChart = function( trans ) {
-        Logger.info("AccountController.renderTranChart: ");
-
-        if (trans.length == 0) {
-            return;
-        }
-
-        // Get all date labels from earliest tran to today
-        var fromTs = trans[ trans.length-1 ].timestamp * 1000;
-        var fromDate = new Date( trans[ trans.length-1 ].timestamp * 1000);
-        var labels = DateUtils.createDateLabels( fromDate );
-
-        // Get values.
-        var values = new Array(labels.length);
-        for (var i=0; i < values.length; ++i) {
-            values[i] = 0;
-        }
-
-        // Aggregate tran amounts on a per-day basis
-        _.each( trans, 
-                function(tran) {
-                    var i = DateUtils.dateDiff( 'd', fromTs, tran.timestamp * 1000 );
-                    values[i] += tran.amountValue ;
-                } );
-
-
-        var barColors = ChartUtils.createBarColors( values );       // red and green bar colors
-        values = _.map(values, function(val) { return Math.abs(val); } );   // absolute values
-
-        Logger.fine("AccountController.renderTranChart: values=" + JSON.stringify(values));
-
-        // Setup data frame.
-        var data = {
-            labels: ChartUtils.sampleEvenlyAndReplace( labels, 10, "" ),
-            datasets: [
-                {
-                    label: "My First dataset",
-                    fillColor: "rgba(220,220,220,0.2)",
-                    strokeColor: "rgba(220,220,220,1)",
-                    highlightFill: "#fff",
-                    highlightStroke: "rgba(220,220,220,1)",
-                    data: values
-                }
-            ]
-        };
-
-        // Get the context of the canvas element we want to select
-        var canvas = document.getElementById("tranChart").getContext("2d");
-        var myTranChart = new Chart(canvas).Bar(data, {});
-
-        ChartUtils.setBarColors(myTranChart, barColors);
-    };
-
-
-    /**
      * @return the accountId from the query string.
      */
     var parseAccountIdFromLocation = function() {
@@ -472,58 +445,9 @@ angular.module( "MyApp",  ['puElasticInput'] )
     }
 
     /**
-     * The "more" button ng-click.
-     * Fetch the next page of trans.
-     */
-    var fetchNextPage = function() {
-        Logger.fine("AccountController.fetchNextPage: $scope.page=" + $scope.page);
-        $scope.page += 1;
-        fetchTransByPage( $scope.account, $scope.page, $scope.pageSize )
-            .then( appendTrans )
-            .then( renderTranChart );
-    }
-
-    /**
-     * @return promise fulfilled with trans
-     */
-    var fetchTransByPage = function(account, page, pageSize) {
-        var postData = { "query": { "account": account.accountName,
-                                    "fi": account.fiName,
-                                    "isResolved": { "$exists": false } },
-                         "options": { "sort": { "timestamp": -1 },
-                                      "limit": pageSize,
-                                      "skip": page * pageSize} };
-        return Datastore.fetchTrans( postData );
-    };
-
-    /**
-     * @return  $scope.accountTrans, after being appended by the given trans.
-     */
-    var appendTrans = function(trans) {
-
-        Array.prototype.push.apply( $scope.accountTrans, trans); 
-
-        $scope.accountTransSumAmountValue = MiscUtils.sumField( $scope.accountTrans, "amountValue" );
-
-        // Mark "areAllTransFetched" = true, which will hid the "more" button.
-        if (trans.length < $scope.pageSize) {
-            $scope.areAllTransFetched = true;
-        }
-
-        Logger.info("AccountController.appendTrans: areAllTransFetched=" + $scope.areAllTransFetched);
-        return $scope.accountTrans;
-    };
-
-    /**
      * Export to scope.
      */
     $scope.DateUtils = DateUtils;
-    $scope.accountTrans = [];
-    $scope.fetchNextPage = fetchNextPage;
-    $scope.areAllTransFetched = false;
-    // Technically these don't need to be put in $scope since they're not used by the view.
-    $scope.page = 0;
-    $scope.pageSize = 50;
 
     /**
      * Go!
@@ -532,25 +456,13 @@ angular.module( "MyApp",  ['puElasticInput'] )
              .then( function success(account) { 
                         $scope.account = account; 
                         return account;
-                    } )
-             // Fetch account trans.
-             .then( function success(account) {
-                        return fetchTransByPage( account, $scope.page, $scope.pageSize );
-                    })
-             // Append trans to scope.
-             .then( appendTrans )
-             // Render trans chart.
-             .then( renderTranChart );
+                    } ) ;
 
     Datastore.fetchAccountTimeSeries( parseAccountIdFromLocation() )
              .then( function success(accountTimeSeries) { 
                         $scope.accountTimeSeries = accountTimeSeries;
                         renderValueChart( $scope.accountTimeSeries );
                     });
-
-    Datastore.fetchTags()
-             .then( function success(tags) { $scope.tags = tags; } ); 
-
 
 }])
 
@@ -581,16 +493,525 @@ angular.module( "MyApp",  ['puElasticInput'] )
 }])
 
 
+/**
+ * Controller for saving a query.
+ * Drop-down box containing names of all queries.
+ *
+ * "Load" button (or just load it automatically when it's selected?)
+ * "Save" button (with either "overwrite warning" or "recovery option")
+ *
+ */
+.controller( "SaveQueryFormController", ["$scope", "_", "$location", "Logger", "$rootScope", "Datastore", "MiscUtils", 
+                                function( $scope,   _ ,  $location,   Logger,   $rootScope,   Datastore,   MiscUtils) {
+
+    Logger.info("SaveQueryFormController: Alive!");
+
+
+    /**
+     * Called when the form is submitted.
+     * Add a new saved query to the database.
+     */
+    var saveQuery = function() {
+       
+        var newSavedQuery = { name: $scope.inputSavedQueryName, 
+                              query: $scope.postData.query };
+        
+        Logger.info("SaveQueryFormController.saveQuery: $scope.inputSavedQueryName=" + $scope.inputSavedQueryName
+                                                   + ", $scope.postData=" + JSON.stringify( $scope.postData ) 
+                                                   + ", $scope.selectedSavedQuery=" + JSON.stringify($scope.selectedSavedQuery),
+                                                   + ", newSavedQuery=" + JSON.stringify(newSavedQuery) );
+
+        Datastore.saveQuery( newSavedQuery )
+                 .then( function() {  
+                            // first remove if it already exists.
+                            $scope.savedQueries = _.filter( $scope.savedQueries, 
+                                                            function(savedQuery) { 
+                                                                return savedQuery.name != newSavedQuery.name; 
+                                                            } );
+
+                            // add it back (possibly with an updated query).
+                            $scope.savedQueries.push( newSavedQuery );
+                            setSavedQueries( $scope.savedQueries );
+                        } );
+    };
+
+    /**
+     * Set the savedQueries into scope and sort them by name.
+     */
+    var setSavedQueries = function(savedQueries) {
+        $scope.savedQueries = _.sortBy( savedQueries, "name" );
+        Logger.info("SaveQueryFormController.setSavedQueries: " + JSON.stringify( $scope.savedQueries ) );
+    };
+
+    /**
+     * Broadcast $loadSavedQuery event, which will be heard by the
+     * parent controller TranQueryController, which will reload the tran data
+     * based on the selected query.
+     */
+    var onChangeSavedQuery = function() {
+        Logger.info("SaveQueryFormController.onChangeSavedQuery: $scope.selectedSavedQuery=" + JSON.stringify($scope.selectedSavedQuery) );
+
+        if ($scope.selectedSavedQuery != null) {
+            $rootScope.$broadcast("$loadSavedQuery", $scope.selectedSavedQuery);
+        }
+
+    };
+
+    /**
+     * @return the set of savedQueries whose name begins with the searchText.
+     */
+    var getSavedQueries = function(searchText) {
+        Logger.info("SaveQueryFormController.getSavedQueries: " + searchText );
+
+        if ( !MiscUtils.isEmpty(searchText) ) {
+            return _.filter( $scope.savedQueries, 
+                             function( savedQuery ) {
+                                 return savedQuery.name.toLowerCase().startsWith(searchText.toLowerCase());
+                             } );
+        } else {
+            return $scope.savedQueries;
+        }
+    };
+
+    /**
+     * Export to scope.
+     */
+    $scope.saveQuery = saveQuery;
+    $scope.savedQueries = [];
+
+    $scope.onChangeSavedQuery = onChangeSavedQuery;
+    $scope.getSavedQueries = getSavedQueries;
+
+    Datastore.fetchSavedQueries()
+             .then( setSavedQueries );
+
+    // -rx- setSavedQueries( [ {   name: "My Bills",
+    // -rx-                        query: {"$or":[{"tags":"bills"}],"isResolved":{"$exists":false}}
+    // -rx-                    },
+    // -rx-                    {   name: "Feb Budget",
+    // -rx-                        query: {"timestamp":{"$gte":1453878000,"$lte":1456556400},"isResolved":{"$exists":false}}
+    // -rx-                    }
+    // -rx-                  ] );
+    // -rx-                        
+}])
+
 
 /**
- * Controller for trans.html.
+ * Controller for tran lists and queries.
  */
-.controller( "TranQueryController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore",
-                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore) {
+.controller( "TranQueryController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "MiscUtils", "ChartUtils",
+                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   MiscUtils,   ChartUtils) {
 
-    Logger.info("TranQueryController: Alive!");
+    Logger.info("TranQueryController: alive! $location.search=" + JSON.stringify($location.search()));
 
-    // TODO
+    /**
+     * Remember theTranChart so we can clear its data when the tran list is updated.
+     */
+    var theTranChart = null;
+
+    /**
+     * Render the tran bar chart.
+     */
+    var renderTranChart = function( trans ) {
+        Logger.info("TranQueryController.renderTranChart: ");
+
+        if (theTranChart != null) {
+            Logger.info("TranQueryController.renderTranChart: clearing previous tran chart");
+            theTranChart.destroy();
+        }
+
+        if (trans.length == 0) {
+            return;
+        }
+
+        // Get all date labels from earliest tran (last element) to most recent tran (first element)
+        var fromTs = trans[ trans.length-1 ].timestamp * 1000;
+        var fromDate = new Date( trans[ trans.length-1 ].timestamp * 1000);
+        var toTs = trans[0].timestamp * 1000;
+        var toDate = new Date( toTs );
+        var labels = DateUtils.createDateLabels( fromDate, toDate );
+
+        // Get values.
+        var values = new Array(labels.length);
+        for (var i=0; i < values.length; ++i) {
+            values[i] = 0;
+        }
+
+        // Aggregate tran amounts on a per-day basis
+        _.each( trans, 
+                function(tran) {
+                    var i = DateUtils.dateDiff( 'd', fromTs, tran.timestamp * 1000 );
+                    values[i] += tran.amountValue ;
+                } );
+
+
+        var barColors = ChartUtils.createBarColors( values );       // red and green bar colors
+        values = _.map(values, function(val) { return Math.abs(val); } );   // absolute values
+
+        Logger.fine("TranQueryController.renderTranChart: values=" + JSON.stringify(values));
+
+        // Setup data frame.
+        var data = {
+            labels: ChartUtils.sampleEvenlyAndReplace( labels, 10, "" ),
+            datasets: [
+                {
+                    label: "My First dataset",
+                    fillColor: "rgba(220,220,220,0.2)",
+                    strokeColor: "rgba(220,220,220,1)",
+                    highlightFill: "#fff",
+                    highlightStroke: "rgba(220,220,220,1)",
+                    data: values
+                }
+            ]
+        };
+
+
+        // Get the context of the canvas element we want to select
+        var canvas = document.getElementById("tranChart").getContext("2d");
+        theTranChart = new Chart(canvas).Bar(data, {});
+
+        ChartUtils.setBarColors(theTranChart, barColors);
+    };
+
+
+    /**
+     * @return the accountId from the query string.
+     */
+    var parseAccountIdFromLocation = function() {
+        return $location.search().accountId || 0;
+    }
+
+    /**
+     * The "more" button ng-click.
+     * Fetch the next page of trans.
+     */
+    var fetchNextPage = function() {
+        Logger.fine("TranQueryController.fetchNextPage: $scope.page=" + $scope.page);
+        $scope.page += 1;
+        fetchTransByPage( $scope.postData, $scope.page, $scope.pageSize )
+            .then( appendTrans )
+            .then( renderTranChart );
+    }
+
+    /**
+     * @return promise fulfilled with trans
+     */
+    var fetchTransByPage = function(postData, page, pageSize) {
+        postData.options = { 
+                               "sort": { "timestamp": -1 },
+                               "limit": pageSize,
+                               "skip": page * pageSize
+                           } ;
+        $scope.thinking = true;
+        return Datastore.fetchTrans( postData );
+    };
+
+    /**
+     * Callback after fetching trans from the db.
+     *
+     * @return  $scope.trans, after being appended by the given trans.
+     */
+    var appendTrans = function(trans) {
+
+        $scope.thinking = false;
+
+        Array.prototype.push.apply( $scope.trans, trans); 
+
+        $scope.transSums["amountValue"] = MiscUtils.sumField( $scope.trans, "amountValue" );
+
+        // Mark "areAllTransFetched" = true, which will hid the "more" button.
+        if (trans.length < $scope.pageSize) {
+            $scope.areAllTransFetched = true;
+        }
+
+        Logger.info("TranQueryController.appendTrans: areAllTransFetched=" + $scope.areAllTransFetched);
+        return $scope.trans;
+    };
+
+    /**
+     * Fetch the total number of trans for the account.
+     */
+    var fetchTransCount = function(postData) {
+        Datastore.fetchTransCount( postData )
+                 .then( function(count) { 
+                            $scope.transCount = count;
+                        });
+    };
+
+
+    /**
+     * Reset the trans array and the page number.
+     */
+    var resetTranList = function() {
+
+        $scope.trans = [];
+        $scope.page = 0;
+        $scope.areAllTransFetched = false;
+    };
+
+    /**
+     * Called from the view.
+     */
+    var onQueryFormSubmit = function() {
+
+        resetTranList();
+        $scope.postData.query = buildQuery();
+
+        reloadTrans();
+    };
+
+    /**
+     * Fetch trans for the updated query.
+     */
+    var reloadTrans = function() {
+
+        fetchTransCount($scope.postData);
+        fetchTransByPage( $scope.postData, $scope.page, $scope.pageSize )
+                 // Append trans to scope.
+                 .then( appendTrans )
+                 // Render trans chart.
+                 .then( renderTranChart );
+    };
+
+    /**
+     * Build a query object based on all form data.
+     *
+     * @sideeffect sets $scope.postData.query
+     */
+    var buildQuery = function() {
+
+        var query = {};
+        var dateQuery = buildDateQuery( $scope.startDate, $scope.endDate );
+        var tagsQuery = buildTagsQuery( $scope.tagsFilter );
+
+        if ( ! _.isEmpty( dateQuery ) && ! _.isEmpty( tagsQuery ) ) {
+            query = { "$and": [ dateQuery, tagsQuery ] };
+        } else if (  ! _.isEmpty( dateQuery ) ) {
+            query = dateQuery;
+        } else if (  ! _.isEmpty( tagsQuery ) ) {
+            query = tagsQuery;
+        }
+
+        Logger.info("TranQueryController.buildQuery: query=" + JSON.stringify(query) );
+        return query;
+    };
+
+    /**
+     * TODO
+     */
+    var buildDateQuery = function(startDate, endDate) {
+        var query = {};
+        if (startDate != null) {
+            query.timestamp = query.timestamp || {};
+            query.timestamp["$gte"] = startDate.getTime() / 1000;
+        }
+
+        if (endDate != null) {
+            query.timestamp = query.timestamp || {};
+            query.timestamp["$lte"] = endDate.getTime() / 1000;
+        }
+
+        Logger.info("TranQueryController.buildDateQuery: query=" + JSON.stringify(query) );
+
+        return query;
+    };
+
+    /**
+     * @return a query object for the given tags.
+     */
+    var buildTagsQuery = function( tagsFilter ) {
+        var query = {};
+        if ( tagsFilter.length > 0 ) {
+            query = { "$or": _.map( tagsFilter, function(tag) { return { "tags": tag }; } ) } ;
+            // end up with something like:
+            // { $or: [ { tags: "dining" }, {tags: "socializing"} ] }
+        }
+
+        Logger.info("TranQueryController.buildTagsQuery: query=" + JSON.stringify(query) );
+        return query;
+    };
+
+    /**
+     * @return query data for the given account
+     */
+    var buildQueryFromAccount = function( account ) {
+        Logger.info("TranQueryController.buildQueryFromAccount: account=" + JSON.stringify(account));
+        return {   "account": account.accountName,
+                   "fi": account.fiName };
+    };
+
+    /**
+     * We must be embedded in the account.html page.
+     * Fetch the account trans.
+     */
+    var forAccountPage = function( accountId ) {
+        Logger.info("TranQueryController.forAccountPage: accountId=" + accountId );
+        Datastore.fetchAccount( accountId )
+                 .then( function success(account) { 
+                            $scope.postData.query = buildQueryFromAccount(account); 
+                            reloadTrans();
+                        });
+                 // -rx-            fetchTransCount($scope.postData);
+                 // -rx-            return fetchTransByPage( $scope.postData, $scope.page, $scope.pageSize );
+                 // -rx-        } )
+                 // -rx- // Append trans to scope.
+                 // -rx- .then( appendTrans )
+                 // -rx- // Render trans chart.
+                 // -rx- .then( renderTranChart );
+    };
+
+    /**
+     * When used in the trans.html page.
+     */
+    var forTransPage = function() {
+        reloadTrans();
+    };
+
+    /**
+     * Called when the user hits 'enter' after typing in a tag.
+     * Add the tag to tagsFilter
+     */
+    var addTag = function() {
+        Logger.info("TranQueryController.addTag: " + $scope.inputTagFilter);
+        var tag = $scope.inputTagFilter;
+
+        // Clear the input field.
+        $scope.inputTagFilter = "";
+
+        if (MiscUtils.isEmpty(tag)) {
+            return;
+        }
+
+        if ( ! _.contains($scope.tagsFilter, tag) ) {
+            $scope.tagsFilter.push(tag);
+            Logger.info("TranQueryController.addTag: $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter));
+        }
+    }
+
+    /**
+     * Remove the tag from the tagsFilter list
+     */
+    var removeTag = function(tag) {
+        $scope.tagsFilter = _.filter( $scope.tagsFilter, function(t) { return t != tag; } );
+        Logger.info("TranQueryController.removeTag: " + tag + ", $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter) );
+    };
+
+    /**
+     * Parse the dates from the saved query and set them into the $scope
+     * which updates the view.
+     *
+     * @sideeffect sets $scope.startDate and/or $scope.endDate
+     */
+    var parseDatesFromSavedQuery = function(savedQuery) {
+        
+        // Makes assumptions about the structure of the query.
+        // Must be kept in sync with buildQuery
+        var timestampQuery = (angular.isDefined(savedQuery.query["$and"])) 
+                                            ? savedQuery.query["$and"][0]["timestamp"]
+                                            : savedQuery.query["timestamp"];
+
+        Logger.info("TranQueryController.parseDatesFromSavedQuery: timestampQuery=" + JSON.stringify(timestampQuery));
+
+        if ( angular.isUndefined( timestampQuery ) ) {
+            $scope.startDate = null;
+            $scope.endDate = null;
+            return;
+        }
+
+        if ( angular.isDefined( timestampQuery["$gte"] ) ) {
+            $scope.startDate = new Date( timestampQuery["$gte"] * 1000);
+        } else {
+            $scope.startDate = null;
+        }
+
+        if ( angular.isDefined( timestampQuery["$lte"] ) ) {
+            $scope.endDate = new Date( timestampQuery["$lte"] * 1000);
+        } else {
+            $scope.endDate = null;
+        }
+    };
+
+    /**
+     * Parse the tags from the saved query and set them into the $scope
+     * which updates the view.
+     *
+     * @sideeffect sets $scope.tagsFilter
+     */
+    var parseTagsFromSavedQuery = function(savedQuery) {
+        
+        var tagsQuery = (angular.isDefined(savedQuery.query["$and"])) 
+                                            ? savedQuery.query["$and"][1]["$or"]
+                                            : savedQuery.query["$or"];
+
+
+        if ( angular.isUndefined( tagsQuery ) ) {
+            $scope.tagsFilter = [];
+            return;
+        }
+        
+        $scope.tagsFilter = _.pluck( tagsQuery, "tags" );
+        Logger.info("TranQueryController.parseTagsFromSavedQuery: tagsQuery=" + JSON.stringify(tagsQuery)
+                                                            + ", $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter) );
+    };
+
+    /**
+     * Event hanlder for "$loadSavedQuery" event.
+     *
+     * @sideeffect update $scope.postData and reload trans.
+     * @sideeffect form fields (tags, startDate, endDate) are set
+     *
+     */
+    var onLoadSavedQuery = function(theEvent, savedQuery) {
+        Logger.info("TranQueryController.onLoadSavedQuery: savedQuery=" + JSON.stringify(savedQuery));
+
+        resetTranList();
+        $scope.postData.query = savedQuery.query;
+
+        parseDatesFromSavedQuery( savedQuery );
+        parseTagsFromSavedQuery( savedQuery );
+
+        reloadTrans();
+    };
+
+    $scope.$on("$loadSavedQuery", onLoadSavedQuery);
+
+    /**
+     * Export to scope.
+     */
+    $scope.addTag = addTag;
+    $scope.removeTag = removeTag;
+    $scope.tagsFilter = [];
+
+    /**
+     * Init data
+     */
+    $scope.transCount = "xx";
+    $scope.trans = [];
+    $scope.transSums = {};
+    // Technically these don't need to be put in $scope since they're not used by the view.
+    $scope.page = 0;
+    $scope.pageSize = 50;
+    $scope.startDate = null;
+    $scope.endDate = null;
+
+    $scope.postData = {};
+
+    $scope.fetchNextPage = fetchNextPage;
+    $scope.areAllTransFetched = false;
+    $scope.thinking = true;
+    $scope.onQueryFormSubmit = onQueryFormSubmit;
+
+    if ( parseAccountIdFromLocation() != 0 ) {
+        // We must be embedded in account.html.  Fetch account trans.
+        forAccountPage( parseAccountIdFromLocation() );
+    } else {
+        forTransPage();
+    }
+
+    // Populate tags for auto-fill.
+    Datastore.fetchTags()
+             .then( function success(tags) { $scope.tags = tags; } ); 
+
 }])
 
 
@@ -725,22 +1146,54 @@ angular.module( "MyApp",  ['puElasticInput'] )
         return fetchTrans( postData );
     };
 
+
+    /**
+     * We pretty much never want to get pending trans that have been resolved
+     * to cleared trans.  (mint actually deletes pending trans once they've been cleared).
+     */
+    var setIsResolved = function(postData) {
+        postData.query = postData.query || {};
+        postData.query.isResolved = { "$exists": false } ;
+        return postData;
+    };
+
     /**
      * fetch trans
      *
      * @return promise
      */
     var fetchTrans = function( postData ) {
+        postData = setIsResolved(postData);
         Logger.info("Datastore.fetchTrans: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions", postData )
                     .then( function success(response) {
                                Logger.fine( "Datastore.fetchTrans: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               Logger.severe("Datastore.fetchTrans: POST /query/transactions: response=" + JSON.stringify(response));
+                               Logger.severe("Datastore.fetchTrans: POST /query/transactions"
+                                                                    + ", postData=" + JSON.stringify(postData) 
+                                                                    + ", response=" + JSON.stringify(response));
                            } );
     };
 
+    /**
+     * fetch trans count
+     *
+     * @return promise fullfilled with the count
+     */
+    var fetchTransCount = function( postData ) {
+        postData = setIsResolved(postData);
+        Logger.info("Datastore.fetchTransCount: postData=" + JSON.stringify(postData) );
+        return $http.post( "/query/transactions/count", postData )
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.fetchTrans: response=" + JSON.stringify(response,null,2));
+                               return response.data[0];
+                           }, function error(response) {
+                               Logger.severe("Datastore.fetchTrans: POST /query/transactions/count"
+                                                                    + ", postData=" + JSON.stringify(postData) 
+                                                                    + ", response=" + JSON.stringify(response));
+                           } );
+    };
 
     /**
      * PUT /transactions/{tranId}
@@ -760,7 +1213,41 @@ angular.module( "MyApp",  ['puElasticInput'] )
                            } );
     };
 
+    /**
+     * GET /savedqueries
+     *
+     * @return promise
+     */
+    var fetchSavedQueries = function() {
+        Logger.info("Datastore.fetchSavedQueries: ");
 
+        return $http.get( "/savedqueries" )
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.fetchSavedQueries: response=" + JSON.stringify(response,null,2));
+                               return response.data;
+                           }, function error(response) {
+                               Logger.severe("Datastore.fetchSavedQueries: GET /savedqueries: response=" + JSON.stringify(response)); 
+                           } );
+    };
+
+    /**
+     * POST /savedqueries {savedQuery}
+     * @return promise
+     */
+    var saveQuery = function(savedQuery) {
+        Logger.info("Datastore.saveQuery: savedQuery=" + JSON.stringify(savedQuery) );
+        return $http.post( "/savedqueries", savedQuery)
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.saveQuery: response=" + JSON.stringify(response,null,2));
+                           }, function error(response) {
+                               Logger.severe("Datastore.saveQuery: POST /savedqueries: postData=" + JSON.stringify(savedQuery)
+                                                                      + "response=" + JSON.stringify(response)); 
+                           } );
+    };
+
+    /**
+     * export
+     */
     return {
         fetchTags: fetchTags,
         fetchAccount: fetchAccount,
@@ -769,7 +1256,10 @@ angular.module( "MyApp",  ['puElasticInput'] )
         fetchAccounts: fetchAccounts,
         fetchActiveAccounts: fetchActiveAccounts,
         fetchNewTrans: fetchNewTrans,
+        fetchSavedQueries: fetchSavedQueries,
+        saveQuery: saveQuery,
         fetchTrans: fetchTrans,
+        fetchTransCount: fetchTransCount,
         putTran: putTran
     };
 
@@ -803,9 +1293,17 @@ angular.module( "MyApp",  ['puElasticInput'] )
         return retMe;
     };
 
+    /**
+     * @return true if the given string is null or empty
+     */
+    var isEmpty = function(s) {
+        return angular.isUndefined(s) || !s || s.trim().length == 0;
+    };
+
     return {
         currencyToNumber: currencyToNumber,
-        sumField: sumField
+        sumField: sumField,
+        isEmpty: isEmpty
     };
 }])
 
@@ -945,15 +1443,15 @@ angular.module( "MyApp",  ['puElasticInput'] )
 
     /**
      * @param fromDate
-     * @return an array of date labels between fromDate and today
+     * @return an array of date labels between fromDate and toDate
      */
-    var createDateLabels = function( fromDate ) {
+    var createDateLabels = function( fromDate, toDate ) {
 
-        var today = new Date();
-        var daysBetween = dateDiff('d', fromDate, today);
+        // -rx- var today = new Date();
+        var daysBetween = dateDiff('d', fromDate, toDate);
 
         Logger.info("DateUtils.createDateLabels: fromDate=" + formatDateLabel(fromDate) 
-                                            + ", today=" + formatDateLabel(today) 
+                                            + ", toDate=" + formatDateLabel(toDate) 
                                             + ", daysBetween=" + daysBetween );
 
         var retMe = new Array(daysBetween);

@@ -19,12 +19,25 @@
     <!-- link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.css" -->
     <link rel="stylesheet" href="css/bootstrap.css">
     <link rel="stylesheet" href="css/my-app.css">
+
+    <!-- Angular Material style sheet -->
+    <link rel="stylesheet" href="css/angular-material.css">
+  
+    <!-- Angular Material requires Angular.js Libraries -->
+    <script src="js/angular-animate.js"></script>
+    <script src="js/angular-aria.js"></script>
+    <script src="js/angular-messages.js"></script>
+
+    <!-- Angular Material Library -->
+    <script src="js/angular-material.js"></script>
+
 </head>
 
 <body>
     <div id="tm-page-header" class="container-fluid">
         <div class="container">
             <a href="/">Thinmint</a>
+            <a href="/trans.html">Transactions</a>
         </div>
     </div>
 
@@ -47,32 +60,33 @@
             </div>
         </div>
 
-        <div class="tm-portal">
-            <h3>Time Series: Transactions</h3>
-            <div class="text-center">
-                <canvas id="tranChart" width="1000" height="400"></canvas>
+        <div ng-controller="TranQueryController">
+            <div class="tm-portal">
+                <h3>Time Series: Transactions</h3>
+                <div class="text-center">
+                    <canvas id="tranChart" width="1000" height="400"></canvas>
+                </div>
+            </div>
+
+            <div class="tm-portal" >
+                <h3>Transactions [{{trans.length}} of {{transCount}}]</h3>
+                <table class="table table-condensed table-hover tm-tran-table">
+                    <tr ng-include="'templates/tran-th.html'"></tr>
+                    <tr ng-repeat="tran in trans" ng-include="'templates/tran-tr.html'"></tr>
+
+                    <tr class="tm-list-totals">
+                        <th></th>
+                        <th class="text-right" tm-is-debit="{{ transSums['amountValue'] < 0 }}" >{{ transSums['amountValue'] | currency}}</th>
+                        <th></th>    <!-- pending -->
+                        <th>Total</th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </table>
+                <img src="icons/thinking.gif" ng-if="thinking"/>
+                <button ng-if="!areAllTransFetched && !thinking" class="btn btn-info btn-sm" ng-click="fetchNextPage()">more</button>
             </div>
         </div>
-
-        <div class="tm-portal">
-            <h3>Transactions [{{accountTrans.length}} of xx]</h3>
-            <table class="table table-condensed table-hover tm-tran-table">
-                <tr ng-include="'templates/tran-th.html'"></tr>
-                <tr ng-repeat="tran in accountTrans" ng-include="'templates/tran-tr.html'"></tr>
-
-                <tr class="tm-list-totals">
-                    <th></th>
-                    <th class="text-right" tm-is-debit="{{ accountTransSumAmountValue < 0 }}" >{{accountTransSumAmountValue | currency}}</th>
-                    <th></th>    <!-- pending -->
-                    <th>Total</th>
-                    <th></th>
-                    <th></th>
-                </tr>
-
-            </table>
-            <button ng-if="!areAllTransFetched" class="btn btn-info btn-sm" ng-click="fetchNextPage()">more</button>
-        </div>
-
     </div>
 
     <div id="tm-page-footer" class="container-fluid">

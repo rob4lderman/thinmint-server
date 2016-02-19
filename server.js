@@ -236,11 +236,11 @@ app.put('/transactions/:id', function (req, res) {
  */
 app.post('/query/accounts', function (req, res) {
     var collection = req.db.get('accounts');
-    console.log("POST accounts/query: REQUEST: " + JSON.stringify(req.body))
+    console.log("POST /query/accounts: REQUEST: " + JSON.stringify(req.body))
     collection.find( req.body.query || {}, 
                      req.body.options || {},
                      function(e,docs){
-        console.log("POST accounts/query: RESPONSE:\n" + JSON.stringify(docs))
+        console.log("POST /query/accounts: RESPONSE:\n" + JSON.stringify(docs))
         res.json(docs);
     });
 });
@@ -263,6 +263,64 @@ app.post('/query/transactions', function (req, res) {
                      function(e,docs){
         console.log("POST transactions/query: RESPONSE:\n" + JSON.stringify(docs))
         res.json(docs);
+    });
+});
+
+/**
+ * REST API
+ *
+ * curl -X POST \
+ *   -d '{ "query": { "account": "SAVINGS" } }' \
+ *   -H 'content-type:application/json'  \
+ *   http://localhost:8081/query/transactions/count
+ *
+ * Returns the COUNT.
+ */
+app.post('/query/transactions/count', function (req, res) {
+    var collection = req.db.get('transactions');
+    console.log("POST transactions/query/count: REQUEST: " + JSON.stringify(req.body))
+    collection.count( req.body.query || {}, 
+                     function(e,count){
+        console.log("POST transactions/query/count: " + count)
+        res.json([count]);
+    });
+});
+
+/**
+ * REST API
+ * @return update the account with the given id and return the WriteResult
+ */
+app.post('/savedqueries', function (req, res) {
+    var collection = req.db.get('savedqueries');
+    console.log("POST /savedqueries: REQUEST: " + JSON.stringify(req.body))
+
+    var savedQuery = req.body;
+    savedQuery.query = JSON.stringify( savedQuery.query );
+    console.log("POST /savedqueries: savedQuery: " + JSON.stringify(savedQuery))
+
+    collection.id = function (str) { return str; };  // http://stackoverflow.com/questions/25889863/play-with-meteor-mongoid-in-monk
+    collection.update({ "_id": savedQuery.name }, 
+                      { "$set": savedQuery },
+                      { "upsert": true },
+                      function(e,doc){
+        console.log("POST /savedqueries: RESPONSE:\n" + JSON.stringify(e) + ", " + JSON.stringify(doc))
+        res.json(doc);
+    });
+});
+
+/**
+ * REST API
+ * @return all acounts.
+ */
+app.get('/savedqueries', function (req, res) {
+    var collection = req.db.get('savedqueries');
+    collection.find({},{},function(e,savedQueries) {
+        console.log("GET /savedqueries: savedQueries: " + JSON.stringify(savedQueries))
+        savedQueries.forEach( function(savedQuery) {
+                                  savedQuery.query = JSON.parse(savedQuery.query);
+                              });
+        console.log("GET /savedqueries: savedQueries: " + JSON.stringify(savedQueries))
+        res.json(savedQueries);
     });
 });
 
