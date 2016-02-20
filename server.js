@@ -7,6 +7,8 @@
  */
 
 var express = require('express');
+var _ = require("underscore");
+
 var app = express();
 
 /**
@@ -15,6 +17,8 @@ var app = express();
 var bodyParser = require('body-parser')
 app.use( bodyParser.json() );       // to support JSON-encoded bodies
 app.set('json spaces', 2);          // TODO: DEV-MODE!
+
+// -rx- console.log("process.env: " + JSON.stringify(process.env,null,2));
 
 /**
  * Static pages (JS, CSS, etc)
@@ -25,7 +29,7 @@ app.use( express.static( "static" ) );
  * For accessing mongodb
  */
 var monk = require('monk');
-var db = monk('mongodb://localhost:27017/thinmint'); // TODO: get from env.
+var db = monk( process.env.MONGOLAB_URI || 'mongodb://localhost:27017/thinmint'); 
 
 /**
  * This is like a servlet filter.
@@ -93,7 +97,7 @@ app.get('/accounts/:id/timeseries', function (req, res) {
     collection.find({ "accountId": parseInt(req.params.id) },
                     { "sort": { "timestamp": 1 } },
                     function(e,docs){
-        console.log("GET /accounts/" + req.params.id + "/timeseries: RESPONSE: " + JSON.stringify(docs));
+        console.log("GET /accounts/" + req.params.id + "/timeseries: RESPONSE length: " + docs.length);
         res.json(docs);
     });
 });
@@ -101,7 +105,8 @@ app.get('/accounts/:id/timeseries', function (req, res) {
 
 
 /**
- * TODO
+ * Fetch the object with the given id in the given collection.
+ * Pass it to the callback.
  */
 var fetchById = function( collection, id, callback ) {
     console.log("fetchById: collection=TODO, id=" + id);
@@ -111,7 +116,8 @@ var fetchById = function( collection, id, callback ) {
 
 
 /**
- * TODO
+ * Fetch all trans in the given account.  
+ * Passed to the callback.
  */
 var fetchAccountTrans = function( db, account, callback ) {
     if (account == null) {
@@ -185,7 +191,7 @@ app.get('/transactions/:id', function (req, res) {
     collection.id = function (id) { return id; };  // http://stackoverflow.com/questions/25889863/play-with-meteor-mongoid-in-monk
 
     collection.find({ "_id": parseInt(req.params.id) },{},function(e,docs){
-        console.log("GET /transactions/" + req.params.id + ": RESPONSE: " + JSON.stringify(docs));
+        console.log("GET /transactions/" + req.params.id + ": RESPONSE length: " + docs.length);
         res.json(docs);
     });
 });
@@ -240,7 +246,7 @@ app.post('/query/accounts', function (req, res) {
     collection.find( req.body.query || {}, 
                      req.body.options || {},
                      function(e,docs){
-        console.log("POST /query/accounts: RESPONSE:\n" + JSON.stringify(docs))
+        console.log("POST /query/accounts: RESPONSE length: " + docs.length)
         res.json(docs);
     });
 });
@@ -261,7 +267,7 @@ app.post('/query/transactions', function (req, res) {
     collection.find( req.body.query || {}, 
                      req.body.options || {},
                      function(e,docs){
-        console.log("POST transactions/query: RESPONSE:\n" + JSON.stringify(docs))
+        console.log("POST transactions/query: RESPONSE length: " + docs.length);
         res.json(docs);
     });
 });
@@ -281,14 +287,43 @@ app.post('/query/transactions/count', function (req, res) {
     console.log("POST transactions/query/count: REQUEST: " + JSON.stringify(req.body))
     collection.count( req.body.query || {}, 
                      function(e,count){
-        console.log("POST transactions/query/count: " + count)
-        res.json([count]);
-    });
+                         console.log("POST transactions/query/count: " + count)
+                         res.json([count]);
+                     });
 });
 
 /**
  * REST API
- * @return update the account with the given id and return the WriteResult
+ *
+  curl -X POST \
+    -d '{ "query": { "account": "SAVINGS" } }' \
+    -H 'content-type:application/json'  \
+    http://localhost:8081/query/transactions/summary
+ *
+ * Returns the summary: count, sum(amountValue)
+ */
+app.post('/query/transactions/summary', function (req, res) {
+    var collection = req.db.get('transactions');
+    console.log("POST transactions/query/summary: REQUEST: " + JSON.stringify(req.body))
+    collection.find( req.body.query || {}, 
+                     function(e,trans){
+                         var retMe = { count: trans.length,
+                                       amountValue: _.reduce( trans, 
+                                                              function(memo, tran) {
+                                                                  return memo + tran.amountValue;
+                                                              },
+                                                              0)  // memo
+                                     }
+        console.log("POST transactions/query/summary: " + JSON.stringify(retMe))
+        res.json(retMe);
+    });
+});
+
+
+
+/**
+ * REST API
+ * @return WriteResult
  */
 app.post('/savedqueries', function (req, res) {
     var collection = req.db.get('savedqueries');
@@ -310,7 +345,7 @@ app.post('/savedqueries', function (req, res) {
 
 /**
  * REST API
- * @return all acounts.
+ * @return all saved queries.
  */
 app.get('/savedqueries', function (req, res) {
     var collection = req.db.get('savedqueries');
@@ -327,7 +362,7 @@ app.get('/savedqueries', function (req, res) {
 
 
 
-var server = app.listen(8081, function () {
+var server = app.listen(process.env.PORT || 8081, function () {
 
   var host = server.address().address
   var port = server.address().port

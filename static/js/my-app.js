@@ -694,16 +694,47 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     }
 
     /**
+     * The "all" button ng-click.
+     * Fetch all remaining trans .
+     */
+    var fetchAllRemainingTrans = function() {
+        Logger.fine("TranQueryController.fetchAllRemainingTrans: $scope.page=" + $scope.page);
+        $scope.page += 1;
+
+        $scope.postData.options = buildOptionsForAllRemainingTrans( $scope.page, $scope.pageSize );
+
+        fetchTrans( $scope.postData )
+            .then( appendTrans )
+            .then( renderTranChart );
+    };
+
+    /**
+     * @return an options object to apply to a query that fetches
+     *         all the remaining trans.
+     */
+    var buildOptionsForAllRemainingTrans = function( page, pageSize ) {
+        return { "sort": { "timestamp": -1 },
+                 "skip": page * pageSize
+               } ;
+    };
+
+    /**
+     * @return an options object to apply to a query that fetches
+     *         the next page of trans
+     */
+    var buildOptionsForNextPageOfTrans = function( page, pageSize ) {
+        return { "sort": { "timestamp": -1 },
+                 "limit": pageSize,
+                 "skip": page * pageSize
+               } ;
+    };
+
+    /**
      * @return promise fulfilled with trans
      */
     var fetchTransByPage = function(postData, page, pageSize) {
-        postData.options = { 
-                               "sort": { "timestamp": -1 },
-                               "limit": pageSize,
-                               "skip": page * pageSize
-                           } ;
-        $scope.thinking = true;
-        return Datastore.fetchTrans( postData );
+        postData.options = buildOptionsForNextPageOfTrans( page, pageSize );
+        return fetchTrans( postData );
     };
 
     /**
@@ -729,14 +760,32 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
+     * @return promise, fullfilled with tran data.
+     */
+    var fetchTrans = function(postData) {
+        $scope.thinking = true;
+        return Datastore.fetchTrans( postData );
+    };
+
+    /**
      * Fetch the total number of trans for the account.
      */
-    var fetchTransCount = function(postData) {
-        Datastore.fetchTransCount( postData )
-                 .then( function(count) { 
-                            $scope.transCount = count;
+    var fetchTransSummary = function(postData) {
+        Datastore.fetchTransSummary( postData )
+                 .then( function(transSummary) { 
+                            $scope.transSummary = transSummary;
                         });
     };
+
+    // -rx- /**
+    // -rx-  * Fetch the total number of trans for the account.
+    // -rx-  */
+    // -rx- var fetchTransCount = function(postData) {
+    // -rx-     Datastore.fetchTransCount( postData )
+    // -rx-              .then( function(count) { 
+    // -rx-                         $scope.transCount = count;
+    // -rx-                     });
+    // -rx- };
 
 
     /**
@@ -765,7 +814,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var reloadTrans = function() {
 
-        fetchTransCount($scope.postData);
+        // -rx- fetchTransCount($scope.postData);
+        fetchTransSummary($scope.postData);
         fetchTransByPage( $scope.postData, $scope.page, $scope.pageSize )
                  // Append trans to scope.
                  .then( appendTrans )
@@ -982,24 +1032,30 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     $scope.removeTag = removeTag;
     $scope.tagsFilter = [];
 
+    $scope.startDate = null;
+    $scope.endDate = null;
+    $scope.postData = {};
+
     /**
      * Init data
      */
-    $scope.transCount = "xx";
+    // -rx- $scope.transCount = "xx";
     $scope.trans = [];
-    $scope.transSums = {};
+    $scope.transSums = {};  
+    $scope.transSummary = { "count": "xx", 
+                            "amountValue": 0 
+                          };
+
     // Technically these don't need to be put in $scope since they're not used by the view.
     $scope.page = 0;
     $scope.pageSize = 50;
-    $scope.startDate = null;
-    $scope.endDate = null;
-
-    $scope.postData = {};
 
     $scope.fetchNextPage = fetchNextPage;
+    $scope.fetchAllRemainingTrans = fetchAllRemainingTrans;
     $scope.areAllTransFetched = false;
-    $scope.thinking = true;
     $scope.onQueryFormSubmit = onQueryFormSubmit;
+
+    $scope.thinking = true;
 
     if ( parseAccountIdFromLocation() != 0 ) {
         // We must be embedded in account.html.  Fetch account trans.
@@ -1196,6 +1252,26 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
+     * fetch trans summary
+     *
+     * @return promise fullfilled with the summary
+     */
+    var fetchTransSummary = function( postData ) {
+        postData = setIsResolved(postData);
+        Logger.info("Datastore.fetchTransSummary: postData=" + JSON.stringify(postData) );
+        return $http.post( "/query/transactions/summary", postData )
+                    .then( function success(response) {
+                               Logger.fine( "Datastore.fetchTransSummary: response=" + JSON.stringify(response,null,2));
+                               return response.data;
+                           }, function error(response) {
+                               Logger.severe("Datastore.fetchTranSummary: POST /query/transactions/summary"
+                                                                    + ", postData=" + JSON.stringify(postData) 
+                                                                    + ", response=" + JSON.stringify(response));
+                           } );
+    };
+
+
+    /**
      * PUT /transactions/{tranId}
      * {putData}
      *
@@ -1260,6 +1336,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         saveQuery: saveQuery,
         fetchTrans: fetchTrans,
         fetchTransCount: fetchTransCount,
+        fetchTransSummary: fetchTransSummary,
         putTran: putTran
     };
 

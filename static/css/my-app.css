@@ -53,6 +53,15 @@ h3, h4 {
     margin-left: 20px;
 }
 
+h3 .tm-grand-total {
+    float: right;
+}
+
+/* make it same width as the "more" button */
+button.tm-fetch-all-trans-button {
+    width: 50px;
+}
+
 .form-tag {
     display: inline-block;
     margin-bottom: 0px;
