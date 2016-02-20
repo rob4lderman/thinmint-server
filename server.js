@@ -9,6 +9,55 @@
 var express = require('express');
 var _ = require("underscore");
 
+/**
+ * For encrypting passwords.
+ * https://masteringmean.com/lessons/46-Encryption-and-password-hashing-with-Nodejs
+ */
+var crypto = require('crypto');
+
+/**
+ * For accessing mongodb
+ */
+var monk = require('monk');
+var db = monk( process.env.MONGOLAB_URI || 'mongodb://localhost:27017/thinmint'); 
+
+/**
+ * For HTTP BASIC auth.
+ * http://passportjs.org/docs/basic-digest
+ */
+var passport = require('passport')
+var BasicStrategy = require('passport-http').BasicStrategy;
+
+/**
+ * Configure passport with BASIC auth strateigy
+ */
+passport.use(new BasicStrategy( function(username, password, done) {
+                                    var hash = crypto.createHash("md5")
+                                                     .update(password)
+                                                     .digest('hex');
+
+                                    console.log("BasicStrategy.callback: username=" + username + ", password hash:" + hash);
+
+                                    var collection = db.get('tm-users');
+                                    collection.id = function (id) { return id; };  // http://stackoverflow.com/questions/25889863/play-with-meteor-mongoid-in-monk
+                                    collection.findOne({ "_id": username,
+                                                         "password": hash 
+                                                       },
+                                                       { },
+                                                       function(err,user){
+                                                           console.log("BasicStrategy:tm-users.find: err=" + JSON.stringify(err) 
+                                                                                                  + ", user=" + JSON.stringify(user) );
+                                                           if (err) {
+                                                               return done(err);
+                                                           } else if (!user) {
+                                                               return done(null, false, { message: "Incorrect user or password" });
+                                                           } else {
+                                                               return done(null, user);
+                                                           }
+                                                       });
+                                }) 
+            );
+
 var app = express();
 
 /**
@@ -24,12 +73,9 @@ app.set('json spaces', 2);          // TODO: DEV-MODE!
  * Static pages (JS, CSS, etc)
  */
 app.use( express.static( "static" ) );
+app.use( passport.initialize() );
+// app.use( passport.session() );
 
-/**
- * For accessing mongodb
- */
-var monk = require('monk');
-var db = monk( process.env.MONGOLAB_URI || 'mongodb://localhost:27017/thinmint'); 
 
 /**
  * This is like a servlet filter.
@@ -59,7 +105,8 @@ app.get('/accounts', function (req, res) {
  * REST API
  * @return all tags.
  */
-app.get('/tags', function (req, res) {
+app.get('/tags', 
+        function (req, res) {
     var collection = req.db.get('tags');
     collection.findOne({ "_id": 1 },
                        {},
@@ -74,7 +121,9 @@ app.get('/tags', function (req, res) {
  * REST API
  * @return the account with the given id
  */
-app.get('/accounts/:id', function (req, res) {
+app.get('/accounts/:id', 
+        passport.authenticate('basic', { session: false }),
+        function (req, res) {
     var collection = req.db.get('accounts');
     console.log("GET /accounts/" + req.params.id);
 
@@ -94,7 +143,9 @@ app.get('/accounts/:id', function (req, res) {
  * REST API
  * @return the time series data for the given account 
  */
-app.get('/accounts/:id/timeseries', function (req, res) {
+app.get('/accounts/:id/timeseries', 
+        passport.authenticate('basic', { session: false }),
+        function (req, res) {
     console.log("GET /accounts/" + req.params.id + "/timeseries");
 
     var collection = req.db.get('accountsTimeSeries');
@@ -152,7 +203,9 @@ var fetchAccountTrans = function( db, account, callback ) {
  * REST API
  * @return the transaction data for the given account 
  */
-app.get('/accounts/:id/transactions', function (req, res) {
+app.get('/accounts/:id/transactions', 
+        passport.authenticate('basic', { session: false }),
+        function (req, res) {
     console.log("GET /accounts/" + req.params.id + "/transactions");
 
     fetchById( req.db.get("accounts"), 
@@ -170,7 +223,9 @@ app.get('/accounts/:id/transactions', function (req, res) {
  * REST API
  * @return update the account with the given id and return the WriteResult
  */
-app.put('/accounts/:id', function (req, res) {
+app.put('/accounts/:id', 
+        passport.authenticate('basic', { session: false }),
+        function (req, res) {
     var collection = req.db.get('accounts');
     console.log("PUT /accounts/" + req.params.id + ": REQUEST: " + JSON.stringify(req.body))
 
@@ -194,7 +249,9 @@ app.put('/accounts/:id', function (req, res) {
  * REST API
  * @return the transaction with the given id
  */
-app.get('/transactions/:id', function (req, res) {
+app.get('/transactions/:id', 
+        passport.authenticate('basic', { session: false }),
+        function (req, res) {
     var collection = req.db.get('transactions');
     console.log("GET /transactions/" + req.params.id);
 
@@ -215,7 +272,9 @@ app.get('/transactions/:id', function (req, res) {
  * REST API
  * @return update the transaction with the given id and return the WriteResult
  */
-app.put('/transactions/:id', function (req, res) {
+app.put('/transactions/:id', 
+        passport.authenticate('basic', { session: false }),
+        function (req, res) {
     var collection = req.db.get('transactions');
     console.log("PUT /transactions/" + req.params.id + ": REQUEST: " + JSON.stringify(req.body))
 
@@ -257,7 +316,9 @@ app.put('/transactions/:id', function (req, res) {
  *      -H 'content-type:application/json'  \
  *      http://localhost:8081/query/accounts
  */
-app.post('/query/accounts', function (req, res) {
+app.post('/query/accounts', 
+         passport.authenticate('basic', { session: false }),
+         function (req, res) {
     var collection = req.db.get('accounts');
     console.log("POST /query/accounts: REQUEST: " + JSON.stringify(req.body))
     collection.find( req.body.query || {}, 
@@ -280,7 +341,9 @@ app.post('/query/accounts', function (req, res) {
  *   http://localhost:8081/query/transactions
  *
  */
-app.post('/query/transactions', function (req, res) {
+app.post('/query/transactions', 
+         passport.authenticate('basic', { session: false }),
+         function (req, res) {
     var collection = req.db.get('transactions');
     console.log("POST transactions/query: REQUEST: " + JSON.stringify(req.body))
     collection.find( req.body.query || {}, 
@@ -304,7 +367,9 @@ app.post('/query/transactions', function (req, res) {
  *
  * Returns the COUNT.
  */
-app.post('/query/transactions/count', function (req, res) {
+app.post('/query/transactions/count', 
+         passport.authenticate('basic', { session: false }),
+         function (req, res) {
     var collection = req.db.get('transactions');
     console.log("POST transactions/query/count: REQUEST: " + JSON.stringify(req.body))
     collection.count( req.body.query || {}, 
@@ -325,7 +390,9 @@ app.post('/query/transactions/count', function (req, res) {
  *
  * Returns the summary: count, sum(amountValue)
  */
-app.post('/query/transactions/summary', function (req, res) {
+app.post('/query/transactions/summary', 
+         passport.authenticate('basic', { session: false }),
+         function (req, res) {
     var collection = req.db.get('transactions');
     console.log("POST transactions/query/summary: REQUEST: " + JSON.stringify(req.body))
     collection.find( req.body.query || {}, 
@@ -350,7 +417,9 @@ app.post('/query/transactions/summary', function (req, res) {
  * REST API
  * @return WriteResult
  */
-app.post('/savedqueries', function (req, res) {
+app.post('/savedqueries', 
+         passport.authenticate('basic', { session: false }),
+         function (req, res) {
     var collection = req.db.get('savedqueries');
     console.log("POST /savedqueries: REQUEST: " + JSON.stringify(req.body))
 
@@ -374,7 +443,9 @@ app.post('/savedqueries', function (req, res) {
  * REST API
  * @return all saved queries.
  */
-app.get('/savedqueries', function (req, res) {
+app.get('/savedqueries', 
+        passport.authenticate('basic', { session: false }),
+        function (req, res) {
     var collection = req.db.get('savedqueries');
     collection.find({},
                     {},

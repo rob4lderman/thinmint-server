@@ -44,6 +44,14 @@ TODO: all investments trans have txnType=1, everything else txnType=0
 
 
 ===================================================================================================
+Exporting/Importing to mongolab:
+
+
+C:\easy\mysandbox\thinmint-server>C:\\mongodb-2.6.11\\bin\\mongodump -h localhost:27017 -d thinmint -o mongo.thinmint.dump
+C:\\mongodb-2.6.11\\bin\\mongorestore -h {mongolab-server} -d {db} -u <user> -p <password> mongo.thinmint.dump\thinmint
+
+
+===================================================================================================
 CURL commands:
 
 curl -X POST \
