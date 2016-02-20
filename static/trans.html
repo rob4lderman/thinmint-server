@@ -100,19 +100,21 @@
                 <form class="tm-portal tm-save-query-form" ng-controller="SaveQueryFormController" > 
                     <h4>Load &amp; Save Query <small>(note: you must run the query first before saving it)</small></h4>
                     <div class="tm-md-autocomplete">
-                        <md-autocomplete md-selected-item="selectedSavedQuery" 
-                                         md-selected-item-change="onChangeSavedQuery()"
-                                         md-search-text="inputSavedQueryName" 
-                                         md-items="savedQuery in getSavedQueries(inputSavedQueryName)" 
-                                         md-item-text="savedQuery.name"
-                                         md-no-cache="true"
-                                         md-min-length="0"
-                                         md-select-on-match="true"
-                                         placeholder="Load saved query...">
-                            <md-item-template>
-                                <span md-highlight-text="searchText">{{savedQuery.name}}</span>
-                            </md-item-template>
-                        </md-autocomplete>
+                        <md-content>
+                            <md-autocomplete md-selected-item="selectedSavedQuery" 
+                                             md-selected-item-change="onChangeSavedQuery()"
+                                             md-search-text="inputSavedQueryName" 
+                                             md-items="savedQuery in getSavedQueries(inputSavedQueryName)" 
+                                             md-item-text="savedQuery.name"
+                                             md-no-cache="true"
+                                             md-min-length="0"
+                                             md-select-on-match="true"
+                                             placeholder="Load saved query...">
+                                <md-item-template>
+                                    <span md-highlight-text="searchText">{{savedQuery.name}}</span>
+                                </md-item-template>
+                            </md-autocomplete>
+                        </md-content>
                     </div>
                     <div class="text-center">
                         <button class="btn btn-info btn-sm" ng-click="saveQuery()">Save</button>
