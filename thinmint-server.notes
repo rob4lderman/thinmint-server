@@ -9,11 +9,6 @@ TODO: tran query page (filter by account, by tag, by merchant?, by date range, b
 
 TODO: more javascript charts!!! for trans.  barchart by tag.  barchart by month ,etc.
     
-TODO: save queries!  just save { _id: "name", query: postData.query } in "savedQueries" collection :)
-
-TODO: auto-tagging
-        match tags by omerchant
-        "income" for all credits (that are NOT transfers)
 
 TODO: don't create a new accountsTimeSeries record if the balance hasn't changed since the last one.
 
@@ -28,14 +23,8 @@ done: match up pending trans with completed trans  (cross ref via linkedTranIds 
             transfer tags from pending tran to completed tran 
             mark pendingTran hasBeenAcked=true, isResolved=true, linkedTranIds
 
-                  
-TODO: match up transfers (e.g. CC payments with CHECKING account checks, SAVINGS -> CHECKINGS)  transferTranId=[xx] ?
-      abs(tran1.amount) == abs(tran2.amount) && tran1.date == tran2.date
-      tran1.isTransfer==true && tran2.isTransfer==true
-      mint already marks the isTransfer field.
 
 TODO: account "nickname" - display in trans
-
 
         
 TODO: all investments trans have txnType=1, everything else txnType=0

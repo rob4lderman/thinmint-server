@@ -163,7 +163,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     var addTranTag = function(tag) {
 
         // Clear the auto-complete list and the input field.
-        // -rx- $scope.filteredTags = [];   
         $scope.inputTag = "";
 
         tag = (tag || "").trim();
@@ -213,11 +212,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     $scope.onFormSubmit = onFormSubmit;
     $scope.removeTag = removeTag;
-
-    /**
-     * Init data.
-     */
-    // -rx- $scope.filteredTags = [];
 
 }])
 
@@ -271,8 +265,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         require: "ngModel",
         link: function($scope, element, attrs, ngModel) {
 
-                  // -rx- var fillStringList = $parse(attrs.tmAutoFill)($scope);
-                  Logger.info("tmAutoFill.link: entry");
+                  Logger.fine("tmAutoFill.link: entry");
 
                   /**
                    *
@@ -289,8 +282,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                   var autofill = function(element) {
                       var fillStringList = $parse(attrs.tmAutoFill)($scope);
 
-                      Logger.info("tmAutoFill.autofill: element.val()=" + element.val()
-                                                      + ", fillStringList=" + JSON.stringify(fillStringList));
+                      Logger.fine("tmAutoFill.autofill: element.val()=" + element.val()
+                                                    + ", fillStringList=" + JSON.stringify(fillStringList));
 
                       var fillStrings = _.filter( fillStringList, function(fillString) { return fillString.startsWith( element.val() ); } );
 
@@ -434,7 +427,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
         // Get the context of the canvas element we want to select
         var valueChartCanvas = document.getElementById("valueChart").getContext("2d");
-        var myValueChart = new Chart(valueChartCanvas).Line(data, {});
+        var myValueChart = new Chart(valueChartCanvas).Line(data, { responsive: true });
     };
 
     /**
@@ -585,14 +578,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     Datastore.fetchSavedQueries()
              .then( setSavedQueries );
 
-    // -rx- setSavedQueries( [ {   name: "My Bills",
-    // -rx-                        query: {"$or":[{"tags":"bills"}],"isResolved":{"$exists":false}}
-    // -rx-                    },
-    // -rx-                    {   name: "Feb Budget",
-    // -rx-                        query: {"timestamp":{"$gte":1453878000,"$lte":1456556400},"isResolved":{"$exists":false}}
-    // -rx-                    }
-    // -rx-                  ] );
-    // -rx-                        
 }])
 
 
@@ -668,7 +653,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
         // Get the context of the canvas element we want to select
         var canvas = document.getElementById("tranChart").getContext("2d");
-        theTranChart = new Chart(canvas).Bar(data, {});
+        theTranChart = new Chart(canvas).Bar(data, { responsive: true });
 
         ChartUtils.setBarColors(theTranChart, barColors);
     };
@@ -777,17 +762,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                         });
     };
 
-    // -rx- /**
-    // -rx-  * Fetch the total number of trans for the account.
-    // -rx-  */
-    // -rx- var fetchTransCount = function(postData) {
-    // -rx-     Datastore.fetchTransCount( postData )
-    // -rx-              .then( function(count) { 
-    // -rx-                         $scope.transCount = count;
-    // -rx-                     });
-    // -rx- };
-
-
     /**
      * Reset the trans array and the page number.
      */
@@ -814,7 +788,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var reloadTrans = function() {
 
-        // -rx- fetchTransCount($scope.postData);
         fetchTransSummary($scope.postData);
         fetchTransByPage( $scope.postData, $scope.page, $scope.pageSize )
                  // Append trans to scope.
@@ -826,7 +799,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     /**
      * Build a query object based on all form data.
      *
-     * @sideeffect sets $scope.postData.query
+     * @return the query object
      */
     var buildQuery = function() {
 
@@ -847,7 +820,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
-     * TODO
+     * @return a query object of the form { "timestamp": { "$gte": startDate-timestamp, "$lte", endDate-timestamp } }.
+     *         If either startDate or endDate are null they're omitted.
      */
     var buildDateQuery = function(startDate, endDate) {
         var query = {};
@@ -901,13 +875,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                             $scope.postData.query = buildQueryFromAccount(account); 
                             reloadTrans();
                         });
-                 // -rx-            fetchTransCount($scope.postData);
-                 // -rx-            return fetchTransByPage( $scope.postData, $scope.page, $scope.pageSize );
-                 // -rx-        } )
-                 // -rx- // Append trans to scope.
-                 // -rx- .then( appendTrans )
-                 // -rx- // Render trans chart.
-                 // -rx- .then( renderTranChart );
     };
 
     /**
@@ -1039,7 +1006,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     /**
      * Init data
      */
-    // -rx- $scope.transCount = "xx";
     $scope.trans = [];
     $scope.transSums = {};  
     $scope.transSummary = { "count": "xx", 
@@ -1524,7 +1490,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var createDateLabels = function( fromDate, toDate ) {
 
-        // -rx- var today = new Date();
         var daysBetween = dateDiff('d', fromDate, toDate);
 
         Logger.info("DateUtils.createDateLabels: fromDate=" + formatDateLabel(fromDate) 
