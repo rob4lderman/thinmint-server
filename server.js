@@ -47,9 +47,12 @@ app.use(function(req,res,next){
  */
 app.get('/accounts', function (req, res) {
     var collection = req.db.get('accounts');
-    collection.find({},{},function(e,docs){
-        res.json(docs);
-    });
+    collection.find({},
+                    {},
+                    function(err,docs){
+                        docs = docs || [];
+                        res.json(docs);
+                    });
 });
 
 /**
@@ -58,10 +61,12 @@ app.get('/accounts', function (req, res) {
  */
 app.get('/tags', function (req, res) {
     var collection = req.db.get('tags');
-    collection.find({},{},function(e,docs){
-        // There's a single doc in the tags collection, with a single array field named 'tags'.
-        res.json(docs[0].tags);
-    });
+    collection.findOne({ "_id": 1 },
+                       {},
+                       function(err,doc){
+                           doc = doc || { tags: [] };
+                           res.json(doc.tags);
+                       });
 });
 
 
@@ -77,10 +82,11 @@ app.get('/accounts/:id', function (req, res) {
 
     collection.findOne({ "_id": parseInt(req.params.id) },
                        {},
-                       function(e,doc){
-        console.log("GET /accounts/" + req.params.id + ": RESPONSE: " + JSON.stringify(doc));
-        res.json(doc);
-    });
+                       function(err,doc){
+                           console.log("GET /accounts/" + req.params.id + ": RESPONSE: " + JSON.stringify(doc)
+                                                                   + ", err: " + JSON.stringify(err) );
+                           res.json(doc);
+                       });
 });
 
 
@@ -96,10 +102,12 @@ app.get('/accounts/:id/timeseries', function (req, res) {
 
     collection.find({ "accountId": parseInt(req.params.id) },
                     { "sort": { "timestamp": 1 } },
-                    function(e,docs){
-        console.log("GET /accounts/" + req.params.id + "/timeseries: RESPONSE length: " + docs.length);
-        res.json(docs);
-    });
+                    function(err,docs){
+                        docs = docs || [];
+                        console.log("GET /accounts/" + req.params.id + "/timeseries: RESPONSE length: " + docs.length
+                                                                           + ", err: " + JSON.stringify(err) );
+                        res.json(docs);
+                    });
 });
 
 
@@ -173,10 +181,12 @@ app.put('/accounts/:id', function (req, res) {
     collection.update({ "_id": parseInt(req.params.id) }, 
                       { "$set": req.body },
                       { "upsert": false },
-                      function(e,doc){
-        console.log("PUT /accounts/" + req.params.id + ": RESPONSE:\n" + JSON.stringify(docs))
-        res.json(doc);
-    });
+                      function(err,doc){
+                          doc = doc || {};
+                          console.log("PUT /accounts/" + req.params.id + ": RESPONSE:\n" + JSON.stringify(docs)
+                                                                   + ", err: " + JSON.stringify(err) );
+                          res.json(doc);
+                      });
 });
 
 
@@ -190,10 +200,14 @@ app.get('/transactions/:id', function (req, res) {
 
     collection.id = function (id) { return id; };  // http://stackoverflow.com/questions/25889863/play-with-meteor-mongoid-in-monk
 
-    collection.find({ "_id": parseInt(req.params.id) },{},function(e,docs){
-        console.log("GET /transactions/" + req.params.id + ": RESPONSE length: " + docs.length);
-        res.json(docs);
-    });
+    collection.find({ "_id": parseInt(req.params.id) },
+                    {},
+                    function(err,doc){
+                        doc = doc || {};
+                        console.log("GET /transactions/" + req.params.id + ": RESPONSE: " + JSON.stringify(doc)
+                                                                    + ", err: " + JSON.stringify(err) );
+                        res.json(doc);
+                    });
 });
 
 
@@ -212,10 +226,12 @@ app.put('/transactions/:id', function (req, res) {
     collection.update({ "_id": parseInt(req.params.id) }, 
                       { "$set": req.body },
                       { "upsert": false },
-                      function(e,doc){
-        console.log("PUT /transactions/" + req.params.id + ": RESPONSE:\n" + JSON.stringify(doc))
-        res.json(doc);
-    });
+                      function(err,doc){
+                          doc = doc || {};
+                          console.log("PUT /transactions/" + req.params.id + ": RESPONSE:\n" + JSON.stringify(doc)
+                                                                      + ", err: " + JSON.stringify(err) );
+                          res.json(doc);
+                      });
 
     // Also update the tags collection
     var tagsCollection = req.db.get('tags');
@@ -224,9 +240,10 @@ app.put('/transactions/:id', function (req, res) {
     tagsCollection.update({ '_id': 1 }, 
                           { '$addToSet': { 'tags': { '$each': (req.body.tags || []) } } } ,
                           { "upsert": true },
-                      function(e,doc){
-        console.log("UPDATE /tags " + JSON.stringify(req.body.tags || []) + ": COMPLETE");
-    });
+                          function(err,doc){
+                              console.log("UPDATE /tags " + JSON.stringify(req.body.tags || []) + ": COMPLETE"
+                                                          + ", err: " + JSON.stringify(err) );
+                          });
 
 });
 
@@ -245,10 +262,12 @@ app.post('/query/accounts', function (req, res) {
     console.log("POST /query/accounts: REQUEST: " + JSON.stringify(req.body))
     collection.find( req.body.query || {}, 
                      req.body.options || {},
-                     function(e,docs){
-        console.log("POST /query/accounts: RESPONSE length: " + docs.length)
-        res.json(docs);
-    });
+                     function(err,docs){
+                         docs = docs || [];
+                         console.log("POST /query/accounts: RESPONSE length: " + docs.length
+                                                                   + ", err: " + JSON.stringify(err) );
+                         res.json(docs);
+                     });
 });
 
 
@@ -266,10 +285,13 @@ app.post('/query/transactions', function (req, res) {
     console.log("POST transactions/query: REQUEST: " + JSON.stringify(req.body))
     collection.find( req.body.query || {}, 
                      req.body.options || {},
-                     function(e,docs){
-        console.log("POST transactions/query: RESPONSE length: " + docs.length);
-        res.json(docs);
-    });
+                     function(err,docs){
+                         docs = docs || [];
+                         console.log("POST transactions/query: RESPONSE length: " + (docs || []).length
+                                                                      + ", err: " + JSON.stringify(err) );
+                         res.json(docs || []);
+                         }
+                   );
 });
 
 /**
@@ -286,9 +308,10 @@ app.post('/query/transactions/count', function (req, res) {
     var collection = req.db.get('transactions');
     console.log("POST transactions/query/count: REQUEST: " + JSON.stringify(req.body))
     collection.count( req.body.query || {}, 
-                     function(e,count){
-                         console.log("POST transactions/query/count: " + count)
-                         res.json([count]);
+                     function(err,count){
+                         console.log("POST transactions/query/count: " + count
+                                                           + ", err: " + JSON.stringify(err) );
+                         res.json([count || 0]);
                      });
 });
 
@@ -306,17 +329,19 @@ app.post('/query/transactions/summary', function (req, res) {
     var collection = req.db.get('transactions');
     console.log("POST transactions/query/summary: REQUEST: " + JSON.stringify(req.body))
     collection.find( req.body.query || {}, 
-                     function(e,trans){
+                     function(err,trans){
+                         trans = trans || [];
                          var retMe = { count: trans.length,
                                        amountValue: _.reduce( trans, 
                                                               function(memo, tran) {
                                                                   return memo + tran.amountValue;
                                                               },
                                                               0)  // memo
-                                     }
-        console.log("POST transactions/query/summary: " + JSON.stringify(retMe))
-        res.json(retMe);
-    });
+                                     };
+                         console.log("POST transactions/query/summary: " + JSON.stringify(retMe)
+                                                             + ", err: " + JSON.stringify(err) );
+                         res.json(retMe);
+                     });
 });
 
 
@@ -337,10 +362,12 @@ app.post('/savedqueries', function (req, res) {
     collection.update({ "_id": savedQuery.name }, 
                       { "$set": savedQuery },
                       { "upsert": true },
-                      function(e,doc){
-        console.log("POST /savedqueries: RESPONSE:\n" + JSON.stringify(e) + ", " + JSON.stringify(doc))
-        res.json(doc);
-    });
+                      function(err,doc){
+                          doc = doc || {};
+                          console.log("POST /savedqueries: RESPONSE: " + JSON.stringify(doc)
+                                                           + ", err: " + JSON.stringify(err) );
+                          res.json(doc);
+                      });
 });
 
 /**
@@ -349,14 +376,18 @@ app.post('/savedqueries', function (req, res) {
  */
 app.get('/savedqueries', function (req, res) {
     var collection = req.db.get('savedqueries');
-    collection.find({},{},function(e,savedQueries) {
-        console.log("GET /savedqueries: savedQueries: " + JSON.stringify(savedQueries))
-        savedQueries.forEach( function(savedQuery) {
-                                  savedQuery.query = JSON.parse(savedQuery.query);
-                              });
-        console.log("GET /savedqueries: savedQueries: " + JSON.stringify(savedQueries))
-        res.json(savedQueries);
-    });
+    collection.find({},
+                    {},
+                    function(err,savedQueries) {
+                        savedQueries = savedQueries || [];
+                        console.log("GET /savedqueries: savedQueries: " + JSON.stringify(savedQueries)
+                                                            + ", err: " + JSON.stringify(err) );
+                        savedQueries.forEach( function(savedQuery) {
+                                                  savedQuery.query = JSON.parse(savedQuery.query);
+                                              });
+                        console.log("GET /savedqueries: savedQueries: " + JSON.stringify(savedQueries))
+                        res.json(savedQueries);
+                    });
 });
 
 
