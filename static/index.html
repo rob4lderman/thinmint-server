@@ -43,7 +43,6 @@
 
         <div class="tm-portal" ng-controller="NewTransController">
             <h3>New Transactions</h3>
-            <img src="icons/thinking.gif" ng-if="thinking"/>
             <table class="table table-condensed table-hover tm-tran-table">
                 <tr ng-include="'templates/new-tran-th.html'"></tr>
                 <tr ng-repeat="tran in newTrans" ng-include="'templates/new-tran-tr.html'"></tr>
@@ -59,6 +58,9 @@
                 </tr>
 
             </table>
+            <div class="text-center">
+                <img src="icons/thinking.gif" ng-if="isThinking"/>
+            </div>
         </div>
 
         <div ng-controller="AccountSummaryController">
@@ -78,6 +80,9 @@
                         <th></th>
                     </tr>
                 </table>
+                <div class="text-center">
+                    <img src="icons/thinking.gif" ng-if="isThinking"/>
+                </div>
             </div>
 
             <div class="tm-portal tm-account-list">
@@ -116,6 +121,9 @@
                         <th></th>
                     </tr>
                 </table>
+                <div class="text-center">
+                    <img src="icons/thinking.gif" ng-if="isThinking"/>
+                </div>
             </div>
         </div>
 

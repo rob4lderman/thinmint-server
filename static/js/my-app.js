@@ -15,6 +15,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Set $scope.bankAndCreditAccounts
      */
     var setAccounts = function( accounts ) {
+        $scope.isThinking = false;
         $scope.accounts = accounts;
         $scope.bankAndCreditAccounts = _.filter( $scope.accounts, 
                                                  function(account) { 
@@ -78,6 +79,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     $scope.getNetWorthPerf = getNetWorthPerf;
     $scope.sumField = sumField;
 
+    $scope.isThinking = true;
+
     /**
      * Init data
      */
@@ -126,14 +129,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     $scope.$on("$addTranTag", onAddTranTag );
     $scope.$on("$ackTran", onAckTran);
 
-    $scope.thinking = true;
+    $scope.isThinking = true;
 
     /**
      * Init data
      */
     Datastore.fetchNewTrans()
              .then( function success(newTrans) { 
-                        $scope.thinking = false;
+                        $scope.isThinking = false;
                         $scope.newTrans = newTrans; 
                     } ); 
 
