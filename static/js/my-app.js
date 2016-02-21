@@ -7,7 +7,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "AccountSummaryController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "MiscUtils",
                                    function( $scope,   _,   Logger,   DateUtils,   Datastore,   MiscUtils ) {
 
-    Logger.info("AccountSummaryController: alive!");
+    var logger = Logger.getLogger("AccountSummaryController");
+    logger.info("AccountSummaryController: alive!");
 
     /**
      * Set $scope.accounts 
@@ -19,17 +20,21 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                                  function(account) { 
                                                      return account.accountType == "credit" || account.accountType == "bank";
                                                  } );
+        $scope.bankAndCreditAccounts = _.sortBy( $scope.bankAndCreditAccounts, "fiName" );
+
         setAccountSums($scope.bankAndCreditAccountsSums, $scope.bankAndCreditAccounts);
 
         $scope.investmentAccounts = _.filter( $scope.accounts, 
                                                  function(account) { 
                                                      return ! (account.accountType == "credit" || account.accountType == "bank");
                                                  } );
+        $scope.investmentAccounts = _.sortBy( $scope.investmentAccounts, "fiName" );
         setAccountSums($scope.investmentAccountsSums, $scope.investmentAccounts);
     };
 
     /**
-     * TODO
+     * Sums the account fiels ["value", "last7days", "last30days", "last90days", "last365days" ]
+     * and puts the sums in the given sums object, keyed by field name.
      */
     var setAccountSums = function( sums, accounts ) {
         // Set sum totals.
@@ -87,14 +92,15 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "NewTransController",   ["$scope", "_", "Logger", "Datastore", "MiscUtils",
                              function( $scope,   _,   Logger,   Datastore,   MiscUtils ) {
 
-    Logger.info("NewTransController: alive!");
+    var logger = Logger.getLogger("NewTransController");
+    logger.info("NewTransController: alive!");
 
     /**
      * Called when a tran is ACKed.   Remove the tran from the list.
      */
     var onAckTran = function(theEvent, tranId) {
 
-        Logger.info("NewTransController.onAckTran: tranId=" + tranId);
+        logger.info("NewTransController.onAckTran: tranId=" + tranId);
 
         // remove it from the list locally (faster)
         $scope.newTrans = _.filter( $scope.newTrans, function(tran) { return tran._id != tranId } );
@@ -104,7 +110,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Listens for $addTranTag events.
      */
     var onAddTranTag = function(theEvent, tag) {
-        Logger.info("NewTransController.onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
+        logger.info("NewTransController.onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
 
         if ( ! _.contains($scope.tags, tag) ) {
             $scope.tags.push(tag);
@@ -146,13 +152,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "TagFormController",   ["$scope", "_", "$rootScope", "Logger", "Datastore", "MiscUtils",
                             function( $scope,   _ ,  $rootScope,   Logger,   Datastore,   MiscUtils) {
 
-    Logger.fine("TagFormController: alive!: $scope.tran=" + $scope.tran.amount);
+    var logger = Logger.getLogger( "TagFormController" );
+    logger.fine("TagFormController: alive!: $scope.tran=" + $scope.tran.amount);
 
     /**
      * PUT the tag updates to the db.
      */
     var putTranTags = function() {
-        Logger.info("TagFormController.putTranTags: " + JSON.stringify($scope.tran.tags));
+        logger.info("TagFormController.putTranTags: " + JSON.stringify($scope.tran.tags));
         var putData = { "tags": $scope.tran.tags } ;
         Datastore.putTran( $scope.tran._id, putData );
     };
@@ -180,7 +187,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
             // Refresh parent $scope.tags since we may have just added a brand new tag.
             // Safest way to do this is to via Event.
-            Logger.info("TagFormController.addTranTag: $rootScope.$broadcast(event=$addTranTag, tag=" + tag + ")");
+            logger.info("TagFormController.addTranTag: $rootScope.$broadcast(event=$addTranTag, tag=" + tag + ")");
             $rootScope.$broadcast("$addTranTag", tag);
         }
     }
@@ -190,7 +197,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Add the tag to the tran.
      */
     var onFormSubmit = function() {
-        Logger.info("TagFormController.onFormSubmit: " + $scope.inputTag);
+        logger.info("TagFormController.onFormSubmit: " + $scope.inputTag);
         addTranTag( $scope.inputTag )
     }
 
@@ -201,7 +208,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
         // remove it from the tags list 
         $scope.tran.tags = _.filter( $scope.tran.tags, function(t) { return t != tag; } );
-        Logger.info("TagFormController.removeTag: " + tag + ", $scope.tran.tags=" + JSON.stringify($scope.tran.tags) );
+        logger.info("TagFormController.removeTag: " + tag + ", $scope.tran.tags=" + JSON.stringify($scope.tran.tags) );
 
         // Update the db
         putTranTags();
@@ -222,20 +229,21 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "TranAckFormController",   ["$scope", "$rootScope", "Logger", "Datastore",
                                 function( $scope,   $rootScope,   Logger,   Datastore ) {
 
-    Logger.fine("TranAckFormController: alive!");
+    var logger = Logger.getLogger("TranAckFormController");
+    logger.fine("TranAckFormController: alive!");
 
     /**
      * Set hasBeenAcked=true for the given tran in the db.
      */
     var ackTran = function(tranId) {
 
-        Logger.info("TranAckFormController.ackTran: tranId=" + tranId);
+        logger.info("TranAckFormController.ackTran: tranId=" + tranId);
 
         // update the db.
         var putData = { "hasBeenAcked": true } ;
         Datastore.putTran( tranId, putData );
 
-        Logger.info("TranAckFormController.ackTran: $rootScope.$broadcast(event=$ackTran, tranId=" + tranId + ")");
+        logger.info("TranAckFormController.ackTran: $rootScope.$broadcast(event=$ackTran, tranId=" + tranId + ")");
         $rootScope.$broadcast("$ackTran", tranId);
     };
 
@@ -261,11 +269,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
  */
 .directive('tmAutoFill', [ "_", "$parse", "Logger",
                    function(_,   $parse,   Logger) {
+
+    var logger = Logger.getLogger("tmAutoFill");
     var directiveDefiningObj = {
         require: "ngModel",
         link: function($scope, element, attrs, ngModel) {
 
-                  Logger.fine("tmAutoFill.link: entry");
+                  logger.fine("tmAutoFill.link: entry");
 
                   /**
                    *
@@ -282,7 +292,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                   var autofill = function(element) {
                       var fillStringList = $parse(attrs.tmAutoFill)($scope);
 
-                      Logger.fine("tmAutoFill.autofill: element.val()=" + element.val()
+                      logger.fine("tmAutoFill.autofill: element.val()=" + element.val()
                                                     + ", fillStringList=" + JSON.stringify(fillStringList));
 
                       var fillStrings = _.filter( fillStringList, function(fillString) { return fillString.startsWith( element.val() ); } );
@@ -320,7 +330,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
 
                   element.on("keydown", function(keyEvent) {
-                      Logger.fine("directive::tnWatchInput.keydown: $scope.inputTag=" + $scope.inputTag 
+                      logger.fine("directive::tnWatchInput.keydown: $scope.inputTag=" + $scope.inputTag 
                                         + ", keyEvent.which=" + keyEvent.which
                                         + ", element.val()=" + element.val()
                                         + ", element.selectionStart=" + element[0].selectionStart
@@ -358,18 +368,36 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "AccountController",   ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "ChartUtils", "MiscUtils",
                             function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   ChartUtils,   MiscUtils) {
 
-    Logger.info("AccountController: alive! $location.search=" + JSON.stringify($location.search()));
+    var logger = Logger.getLogger("AccountController");
+    logger.info("AccountController: alive! $location.search=" + JSON.stringify($location.search()));
+
+    /**
+     * Remember theChart so we can clear its data when the data is updated.
+     */
+    var chartCanvasElement = document.getElementById("valueChart");
+    var theChart = null;
 
     /**
      * TODO: chart rendering shoudl be done in directive? (since it access the DOM)
      * Render the current balance chart.
      */
-    var renderValueChart = function( accountTimeSeries ) {
-        Logger.info("AccountController.renderValueChart: ");
+    var renderChart = function( accountTimeSeries ) {
+        logger.info("AccountController.renderChart: ");
+
+        if (theChart != null) {
+            logger.info("AccountController.renderChart: clearing previous chart");
+            theChart.destroy();
+        }
+
+        if (accountTimeSeries.length == 0) {
+            return;
+        }
 
         // Get all date labels from earliest tran to today
         var fromTs = accountTimeSeries[ 0 ].timestamp * 1000;
-        var labels = DateUtils.createDateLabels( new Date(fromTs), new Date() );
+        var toTs = accountTimeSeries[ accountTimeSeries.length - 1].timestamp * 1000;
+
+        var labels = DateUtils.createDateLabels( new Date(fromTs), new Date(toTs) );
         
         // Get values.
         var values = new Array(labels.length);
@@ -400,11 +428,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         // values.length / sampleRate = # of data points
         // # of data points should never > 100
         
-        // TODO: include the first and last datapoint in the sample (first is always included... last not always).
-
         var sampleRate = Math.ceil( values.length / Math.min( accountTimeSeries.length, 100 )  );
 
-        Logger.info("AccountController.renderValueChart: sampleRate=" + sampleRate 
+        logger.info("AccountController.renderChart: sampleRate=" + sampleRate 
                                                     + ", values.length=" + values.length
                                                     + ", accountTimeSeries.length=" + accountTimeSeries.length);
 
@@ -426,8 +452,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         };
 
         // Get the context of the canvas element we want to select
-        var valueChartCanvas = document.getElementById("valueChart").getContext("2d");
-        var myValueChart = new Chart(valueChartCanvas).Line(data, { responsive: true });
+        chartCanvasElement.setAttribute("height", "350");
+        theChart = new Chart(chartCanvasElement.getContext("2d"))
+                         .Line(data, { responsive: true });
     };
 
     /**
@@ -438,24 +465,41 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     }
 
     /**
+     * @param accountTimeSeries set into scope
+     * @return accountTimeSeries
+     */
+    var setAccountTimeSeries = function(accountTimeSeries) {
+        $scope.accountTimeSeries = accountTimeSeries;
+        $scope.isChartThinking = false;
+        return accountTimeSeries;
+    };
+
+    /**
+     * @param account set into scope
+     * @return account
+     */
+    var setAccount = function(account) { 
+        $scope.account = account; 
+        $scope.isThinking = false;
+        return account;
+    };
+
+    /**
      * Export to scope.
      */
     $scope.DateUtils = DateUtils;
+    $scope.isChartThinking = true;
+    $scope.isThinking = true;
 
     /**
      * Go!
      */
     Datastore.fetchAccount( parseAccountIdFromLocation() )
-             .then( function success(account) { 
-                        $scope.account = account; 
-                        return account;
-                    } ) ;
+             .then( setAccount );
 
     Datastore.fetchAccountTimeSeries( parseAccountIdFromLocation() )
-             .then( function success(accountTimeSeries) { 
-                        $scope.accountTimeSeries = accountTimeSeries;
-                        renderValueChart( $scope.accountTimeSeries );
-                    });
+             .then( setAccountTimeSeries ) 
+             .then( renderChart );
 
 }])
 
@@ -465,22 +509,34 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
  */
 .factory("Logger", [ function() {
 
+    var name = "RootLogger";
+
     var info = function(msg) {
         console.log(msg);
     }
 
     var fine = function(msg) {
-        // console.log(msg);
+        console.log(msg);
     }
 
     var severe = function(msg) {
         alert(msg);
     }
 
+    var getLogger = function( name, options ) {
+        options = _.extend( { info: false, fine: false, severe: true }, options );
+        return {
+            info: function(msg) { if (options.info) { info( name + ": " + msg); } },
+            fine: function(msg) { if (options.fine) { fine( name + ": " + msg); } },
+            severe: function(msg) { if (options.severe) { severe( name + ": " + msg); } },
+        };
+    }
+
     return {
         info: info,
         fine: fine,
-        severe: severe
+        severe: severe,
+        getLogger: getLogger
     };
 
 }])
@@ -497,7 +553,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "SaveQueryFormController", ["$scope", "_", "$location", "Logger", "$rootScope", "Datastore", "MiscUtils", 
                                 function( $scope,   _ ,  $location,   Logger,   $rootScope,   Datastore,   MiscUtils) {
 
-    Logger.info("SaveQueryFormController: Alive!");
+    var logger = Logger.getLogger("SaveQueryFormController");
+    logger.info("SaveQueryFormController: Alive!");
 
 
     /**
@@ -509,7 +566,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         var newSavedQuery = { name: $scope.inputSavedQueryName, 
                               query: $scope.postData.query };
         
-        Logger.info("SaveQueryFormController.saveQuery: $scope.inputSavedQueryName=" + $scope.inputSavedQueryName
+        logger.info("SaveQueryFormController.saveQuery: $scope.inputSavedQueryName=" + $scope.inputSavedQueryName
                                                    + ", $scope.postData=" + JSON.stringify( $scope.postData ) 
                                                    + ", $scope.selectedSavedQuery=" + JSON.stringify($scope.selectedSavedQuery),
                                                    + ", newSavedQuery=" + JSON.stringify(newSavedQuery) );
@@ -533,7 +590,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var setSavedQueries = function(savedQueries) {
         $scope.savedQueries = _.sortBy( savedQueries, "name" );
-        Logger.info("SaveQueryFormController.setSavedQueries: " + JSON.stringify( $scope.savedQueries ) );
+        logger.info("SaveQueryFormController.setSavedQueries: " + JSON.stringify( $scope.savedQueries ) );
     };
 
     /**
@@ -542,7 +599,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * based on the selected query.
      */
     var onChangeSavedQuery = function() {
-        Logger.info("SaveQueryFormController.onChangeSavedQuery: $scope.selectedSavedQuery=" + JSON.stringify($scope.selectedSavedQuery) );
+        logger.info("SaveQueryFormController.onChangeSavedQuery: $scope.selectedSavedQuery=" + JSON.stringify($scope.selectedSavedQuery) );
 
         if ($scope.selectedSavedQuery != null) {
             $rootScope.$broadcast("$loadSavedQuery", $scope.selectedSavedQuery);
@@ -554,7 +611,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return the set of savedQueries whose name begins with the searchText.
      */
     var getSavedQueries = function(searchText) {
-        Logger.info("SaveQueryFormController.getSavedQueries: " + searchText );
+        logger.info("SaveQueryFormController.getSavedQueries: " + searchText );
 
         if ( !MiscUtils.isEmpty(searchText) ) {
             return _.filter( $scope.savedQueries, 
@@ -587,41 +644,44 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "TranQueryController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "MiscUtils", "ChartUtils",
                             function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   MiscUtils,   ChartUtils) {
 
-    Logger.info("TranQueryController: alive! $location.search=" + JSON.stringify($location.search()));
+    var logger = Logger.getLogger("TranQueryController");
+    logger.info("TranQueryController: alive! $location.search=" + JSON.stringify($location.search()));
 
     /**
-     * Remember theTranChart so we can clear its data when the tran list is updated.
+     * Remember charts so we can clear them when the tran list is updated.
      */
-    var theTranChart = null;
+    var tranChart = null;
+    var tranCanvasElement = document.getElementById("tm-tran-canvas-element");
 
     /**
      * Render the tran bar chart.
      */
-    var renderTranChart = function( trans ) {
-        Logger.info("TranQueryController.renderTranChart: ");
+    var renderChartByDay = function( trans ) {
+        logger.info("TranQueryController.renderChartByDay: ");
 
-        if (theTranChart != null) {
-            Logger.info("TranQueryController.renderTranChart: clearing previous tran chart");
-            theTranChart.destroy();
-        }
+        destroyTranChart( tranChart );
 
-        if (trans.length == 0) {
+        // Safety check.
+        if ( trans.length == 0  || tranCanvasElement == null) {
             return;
         }
 
+        // Step 1. Convert into labels
+        //         The # of labels also tells us how many values there will be
         // Get all date labels from earliest tran (last element) to most recent tran (first element)
-        var fromTs = trans[ trans.length-1 ].timestamp * 1000;
-        var fromDate = new Date( trans[ trans.length-1 ].timestamp * 1000);
-        var toTs = trans[0].timestamp * 1000;
-        var toDate = new Date( toTs );
-        var labels = DateUtils.createDateLabels( fromDate, toDate );
+        var fromTs = getEarlieastTimestamp_ms( trans );
+        var toTs = getLatestTimestamp_ms( trans );
+        var labels = DateUtils.createDateLabels( new Date(fromTs), new Date(toTs) );
 
-        // Get values.
+        // Step 2. Initialize values array
         var values = new Array(labels.length);
         for (var i=0; i < values.length; ++i) {
             values[i] = 0;
         }
 
+        logger.info("TranQueryController.renderChartByDay: aggregate tran values...");
+
+        // Step 3. Transform / reduce trans data 
         // Aggregate tran amounts on a per-day basis
         _.each( trans, 
                 function(tran) {
@@ -629,15 +689,56 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                     values[i] += tran.amountValue ;
                 } );
 
-
+        // Step 4. Create the positive/negative bar colors.
         var barColors = ChartUtils.createBarColors( values );       // red and green bar colors
+
+        // Step 5. Create the actual values for the chart.
         values = _.map(values, function(val) { return Math.abs(val); } );   // absolute values
 
-        Logger.fine("TranQueryController.renderTranChart: values=" + JSON.stringify(values));
+        logger.info("TranQueryController.renderChartByDay: values=" + JSON.stringify(values));
+
+        renderChartWithThisData( ChartUtils.sampleEvenlyAndReplace( labels, 10, "" ),
+                                 values,
+                                 barColors );
+
+        logger.info("TranQueryController.renderChartByDay: exit");
+    };
+
+
+    /**
+     * calls tranChart.destroy
+     */
+    var destroyTranChart = function(tranChart) {
+        if (tranChart != null) {
+            logger.info("TranQueryController.destroyTranChart: clearing previous tran chart");
+            tranChart.destroy();
+        }
+    }
+
+    /**
+     * @return the timestamp from the earliest record. assumes the recors
+     *         are in descending order (ie.. it returns the last timestamp in the array).
+     */
+    var getEarlieastTimestamp_ms = function( trans ) {
+        return (trans.length > 0) ? trans[ trans.length-1 ].timestamp * 1000 : 0;
+    }
+
+    /**
+     * @return the timestamp from the latest record. assumes the recors
+     *         are in descending order (ie.. it returns the first timestamp in the array).
+     */
+    var getLatestTimestamp_ms = function( trans ) {
+        return (trans.length > 0) ? trans[0].timestamp * 1000 : 0;
+    }
+
+    /**
+     * Render the chart with the given data and bar colors.
+     */
+    var renderChartWithThisData = function( labels, values, barColors ) {
 
         // Setup data frame.
         var data = {
-            labels: ChartUtils.sampleEvenlyAndReplace( labels, 10, "" ),
+            labels: labels,
             datasets: [
                 {
                     label: "My First dataset",
@@ -650,14 +751,170 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
             ]
         };
 
-
         // Get the context of the canvas element we want to select
-        var canvas = document.getElementById("tranChart").getContext("2d");
-        theTranChart = new Chart(canvas).Bar(data, { responsive: true });
+        tranCanvasElement.setAttribute("height", "350");
+        tranChart = new Chart(tranCanvasElement.getContext("2d"))
+                                    .Bar(data, { responsive: true });
 
-        ChartUtils.setBarColors(theTranChart, barColors);
+        ChartUtils.setBarColors(tranChart, barColors);
+        logger.info("TranQueryController.renderChartWithThisData: exit");
+    }
+
+    /**
+     * Render the tran by month bar chart.
+     */
+    var renderChartByMonth = function( trans ) {
+        logger.info("TranQueryController.renderChartByMonth: ");
+
+        destroyTranChart(tranChart);
+
+        // Safety check.
+        if ( trans.length == 0  || tranCanvasElement == null) {
+            return;
+        }
+
+        // Step 1. Convert into labels
+        //         The # of labels also tells us how many values there will be
+        // Get all monthLabels from earliest tran (last element) to most recent tran (first element)
+        var monthLabels = DateUtils.createMonthLabels( new Date(getEarlieastTimestamp_ms(trans)), 
+                                                       new Date(getLatestTimestamp_ms(trans)) );  
+
+        // Step 2. Initialize values array
+        // Initialize all values with monthLabel and value.
+        var values = new Array(monthLabels.length);
+        for (var i=0; i < values.length; ++i) {
+            values[i] = { monthLabel: monthLabels[i], value: 0 };
+        }
+
+        logger.info("TranQueryController.renderChartByMonth: values=" + JSON.stringify(values));
+
+        // Step 3. Transform / reduce trans data 
+        // Aggregate tran amounts on a per-month basis
+        _.each( trans, 
+                function(tran) {
+                    var monthLabel = DateUtils.formatMonthLabel( new Date(tran.timestamp * 1000) );  
+                    var value = _.findWhere( values, { monthLabel: monthLabel });
+                    value.value += tran.amountValue;
+                } );
+
+        var pluckValues =  _.pluck( values, "value");
+
+        // Step 4. Create the positive/negative bar colors.
+        var barColors = ChartUtils.createBarColors( pluckValues );    // red and green bar colors
+
+        // Step 5. Create the actual values for the chart.
+        var absPluckValues = _.map( pluckValues, function(val) { return Math.abs(val); } );   // absolute values
+
+        logger.fine("TranQueryController.renderChartByMonth: monthLabels=" + JSON.stringify(monthLabels));
+        logger.fine("TranQueryController.renderChartByMonth: values=" + JSON.stringify(values));
+        logger.fine("TranQueryController.renderChartByMonth: absPluckValues=" + JSON.stringify(absPluckValues));
+
+        renderChartWithThisData( monthLabels, absPluckValues, barColors );
     };
 
+    /**
+     * Render the tran by month bar chart.
+     */
+    var renderChartByTags = function( trans ) {
+
+        currentRenderChartFunction = renderChartByTags;
+        logger.info("TranQueryController.renderChartByTags: ");
+
+        destroyTranChart(tranChart);
+
+        // Safety check.
+        if ( trans.length == 0  || tranCanvasElement == null) {
+            return;
+        }
+
+        // Step 1. Convert into labels
+        //         The # of labels also tells us how many values there will be
+        // Get a list of tags that occur in these trans.
+        var tagLabels = _.reduce( trans, 
+                                  function(memo, tran) {
+                                      _.each( tran.tags || [],
+                                              function(tag) {
+                                                  if ( ! _.contains(memo, tag) ) {
+                                                      memo.push(tag);
+                                                  }
+                                              } );
+                                      return memo;
+                                  },
+                                  [] )
+                         .sort();
+
+
+        // Step 2. Initialize aggregate values
+        var tagAmounts = _.reduce( tagLabels,
+                                   function( memo, tagLabel ) {
+                                       memo[tagLabel] = 0;
+                                       return memo;
+                                   },
+                                   {} );  
+
+        logger.info("TranQueryController.renderChartByTags: values=" + JSON.stringify(tagAmounts));
+
+        // Step 3. Transform / reduce trans data 
+        // Aggregate tran amounts on a per-tag basis
+        _.each( trans, 
+                function(tran) {
+                    _.each( tran.tags || [],
+                            function(tag) {
+                                tagAmounts[tag] += tran.amountValue;
+                            });
+                } );
+
+
+        // Step 4. Convert aggregated data to a simple array.
+        var tagAmountsArray = _.map( tagLabels, function(tagLabel) { return tagAmounts[tagLabel]; } );
+        logger.fine("TranQueryController.renderChartByTags: tagAmountsArray=" + JSON.stringify(tagAmountsArray));
+
+        // Step 5. Create the positive/negative bar colors.
+        var barColors = ChartUtils.createBarColors( tagAmountsArray );    // red and green bar colors
+
+        // Step 6. Create the actual values for the chart.
+        tagAmountsArray = _.map( tagAmountsArray, function(tagAmount) { return Math.abs(tagAmount); } );   
+
+        renderChartWithThisData( tagLabels, tagAmountsArray, barColors );
+    };
+
+    /**
+     * @return the total number of days the given set of trans span.
+     *         it's assumed the trans are in reverse chronological order (by timestamp).
+     */
+    var getDateSpanForTrans = function(trans) {
+        return DateUtils.dateDiff( 'd', 
+                                   getEarlieastTimestamp_ms( trans ), 
+                                   getLatestTimestamp_ms(trans) );
+    }
+
+    /**
+     * Render charts with the given set of trans
+     */
+    var renderChart = function( chartTrans ) {
+        currentRenderChartFunction( chartTrans );
+    };
+
+    /**
+     * Render the chart by day or by month, depending on the size of the data.
+     */
+    var renderChartByTime = function( chartTrans ) {
+        currentRenderChartFunction = renderChartByTime;
+        var daysBetween = getDateSpanForTrans( chartTrans );
+        if (daysBetween < 155) {
+            renderChartByDay( chartTrans );
+        }  else {
+            renderChartByMonth( chartTrans );
+        }
+    };
+
+    /**
+     * Initialize to by time.
+     * This value is updated when user selected on (by tags) or (by time).
+     * It's cached so that if the user updates the query, the chart doesn't
+     * reset to the initial display.
+     */
+    var currentRenderChartFunction = renderChartByTime;
 
     /**
      * @return the accountId from the query string.
@@ -671,11 +928,10 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Fetch the next page of trans.
      */
     var fetchNextPage = function() {
-        Logger.fine("TranQueryController.fetchNextPage: $scope.page=" + $scope.page);
+        logger.fine("TranQueryController.fetchNextPage: $scope.page=" + $scope.page);
         $scope.page += 1;
         fetchTransByPage( $scope.postData, $scope.page, $scope.pageSize )
-            .then( appendTrans )
-            .then( renderTranChart );
+            .then( appendTrans );
     }
 
     /**
@@ -683,14 +939,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Fetch all remaining trans .
      */
     var fetchAllRemainingTrans = function() {
-        Logger.fine("TranQueryController.fetchAllRemainingTrans: $scope.page=" + $scope.page);
+        logger.fine("TranQueryController.fetchAllRemainingTrans: $scope.page=" + $scope.page);
         $scope.page += 1;
 
         $scope.postData.options = buildOptionsForAllRemainingTrans( $scope.page, $scope.pageSize );
 
         fetchTrans( $scope.postData )
-            .then( appendTrans )
-            .then( renderTranChart );
+            .then( appendTrans );
     };
 
     /**
@@ -715,6 +970,19 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
+     * @return an options object to apply to a query that fetches
+     *         all trans but only certain fails.
+     */
+    var buildOptionsForAmountsAndTags = function() {
+        return { "sort": { "timestamp": -1 },
+                 "fields": { "amountValue": 1,
+                             "timestamp": 1,
+                             "tags": 1
+                           }
+               } ;
+    };
+
+    /**
      * @return promise fulfilled with trans
      */
     var fetchTransByPage = function(postData, page, pageSize) {
@@ -729,7 +997,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var appendTrans = function(trans) {
 
-        $scope.thinking = false;
+        $scope.isThinking = false;
 
         Array.prototype.push.apply( $scope.trans, trans); 
 
@@ -740,7 +1008,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
             $scope.areAllTransFetched = true;
         }
 
-        Logger.info("TranQueryController.appendTrans: areAllTransFetched=" + $scope.areAllTransFetched);
+        logger.info("TranQueryController.appendTrans: areAllTransFetched=" + $scope.areAllTransFetched);
         return $scope.trans;
     };
 
@@ -748,7 +1016,19 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise, fullfilled with tran data.
      */
     var fetchTrans = function(postData) {
-        $scope.thinking = true;
+        $scope.isThinking = true;
+        return Datastore.fetchTrans( postData );
+    };
+
+    /**
+     * Fetch amounts and tags from all trans (not just a single page),
+     * for chart data and full summaries.
+     *
+     * @return promise fullfilled with all trans
+     */
+    var fetchTranAmountsAndTags = function(postData) {
+        postData.options = buildOptionsForAmountsAndTags();
+        $scope.isChartThinkint = true;
         return Datastore.fetchTrans( postData );
     };
 
@@ -766,7 +1046,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Reset the trans array and the page number.
      */
     var resetTranList = function() {
-
         $scope.trans = [];
         $scope.page = 0;
         $scope.areAllTransFetched = false;
@@ -784,16 +1063,29 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
+     * @param chartTrans set them on scope in case we want to re-render them by tags or by time.
+     * @return chartTrans
+     */
+    var setChartTrans = function(chartTrans) {
+        $scope.chartTrans = chartTrans;
+        $scope.isChartThinking = false;
+        return chartTrans;
+    };
+
+    /**
      * Fetch trans for the updated query.
      */
     var reloadTrans = function() {
 
-        fetchTransSummary($scope.postData);
+        fetchTransSummary($scope.postData);     // TODO: can roll this into fetchTranAmountsAndTags
+
+        fetchTranAmountsAndTags( _.extend( {}, $scope.postData) )
+                 .then( setChartTrans )
+                 .then( renderChart );
+
         fetchTransByPage( $scope.postData, $scope.page, $scope.pageSize )
                  // Append trans to scope.
-                 .then( appendTrans )
-                 // Render trans chart.
-                 .then( renderTranChart );
+                 .then( appendTrans );
     };
 
     /**
@@ -815,7 +1107,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
             query = tagsQuery;
         }
 
-        Logger.info("TranQueryController.buildQuery: query=" + JSON.stringify(query) );
+        logger.info("TranQueryController.buildQuery: query=" + JSON.stringify(query) );
         return query;
     };
 
@@ -835,7 +1127,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
             query.timestamp["$lte"] = endDate.getTime() / 1000;
         }
 
-        Logger.info("TranQueryController.buildDateQuery: query=" + JSON.stringify(query) );
+        logger.info("TranQueryController.buildDateQuery: query=" + JSON.stringify(query) );
 
         return query;
     };
@@ -851,7 +1143,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
             // { $or: [ { tags: "dining" }, {tags: "socializing"} ] }
         }
 
-        Logger.info("TranQueryController.buildTagsQuery: query=" + JSON.stringify(query) );
+        logger.info("TranQueryController.buildTagsQuery: query=" + JSON.stringify(query) );
         return query;
     };
 
@@ -859,7 +1151,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return query data for the given account
      */
     var buildQueryFromAccount = function( account ) {
-        Logger.info("TranQueryController.buildQueryFromAccount: account=" + JSON.stringify(account));
+        logger.info("TranQueryController.buildQueryFromAccount: account=" + JSON.stringify(account));
         return {   "account": account.accountName,
                    "fi": account.fiName };
     };
@@ -869,7 +1161,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Fetch the account trans.
      */
     var forAccountPage = function( accountId ) {
-        Logger.info("TranQueryController.forAccountPage: accountId=" + accountId );
+        logger.info("TranQueryController.forAccountPage: accountId=" + accountId );
         Datastore.fetchAccount( accountId )
                  .then( function success(account) { 
                             $scope.postData.query = buildQueryFromAccount(account); 
@@ -878,7 +1170,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
-     * When used in the trans.html page.
+     * We must be embedded in the trans.html page.
+     * Fetch all trans.
      */
     var forTransPage = function() {
         reloadTrans();
@@ -889,7 +1182,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Add the tag to tagsFilter
      */
     var addTag = function() {
-        Logger.info("TranQueryController.addTag: " + $scope.inputTagFilter);
+        logger.info("TranQueryController.addTag: " + $scope.inputTagFilter);
         var tag = $scope.inputTagFilter;
 
         // Clear the input field.
@@ -901,7 +1194,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
         if ( ! _.contains($scope.tagsFilter, tag) ) {
             $scope.tagsFilter.push(tag);
-            Logger.info("TranQueryController.addTag: $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter));
+            logger.info("TranQueryController.addTag: $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter));
         }
     }
 
@@ -910,7 +1203,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var removeTag = function(tag) {
         $scope.tagsFilter = _.filter( $scope.tagsFilter, function(t) { return t != tag; } );
-        Logger.info("TranQueryController.removeTag: " + tag + ", $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter) );
+        logger.info("TranQueryController.removeTag: " + tag + ", $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter) );
     };
 
     /**
@@ -927,7 +1220,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                             ? savedQuery.query["$and"][0]["timestamp"]
                                             : savedQuery.query["timestamp"];
 
-        Logger.info("TranQueryController.parseDatesFromSavedQuery: timestampQuery=" + JSON.stringify(timestampQuery));
+        logger.info("TranQueryController.parseDatesFromSavedQuery: timestampQuery=" + JSON.stringify(timestampQuery));
 
         if ( angular.isUndefined( timestampQuery ) ) {
             $scope.startDate = null;
@@ -967,7 +1260,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         }
         
         $scope.tagsFilter = _.pluck( tagsQuery, "tags" );
-        Logger.info("TranQueryController.parseTagsFromSavedQuery: tagsQuery=" + JSON.stringify(tagsQuery)
+        logger.info("TranQueryController.parseTagsFromSavedQuery: tagsQuery=" + JSON.stringify(tagsQuery)
                                                             + ", $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter) );
     };
 
@@ -979,7 +1272,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      *
      */
     var onLoadSavedQuery = function(theEvent, savedQuery) {
-        Logger.info("TranQueryController.onLoadSavedQuery: savedQuery=" + JSON.stringify(savedQuery));
+        logger.info("TranQueryController.onLoadSavedQuery: savedQuery=" + JSON.stringify(savedQuery));
 
         resetTranList();
         $scope.postData.query = savedQuery.query;
@@ -1020,8 +1313,11 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     $scope.fetchAllRemainingTrans = fetchAllRemainingTrans;
     $scope.areAllTransFetched = false;
     $scope.onQueryFormSubmit = onQueryFormSubmit;
+    $scope.renderChartByTime = renderChartByTime;
+    $scope.renderChartByTags = renderChartByTags;
 
-    $scope.thinking = true;
+    $scope.isThinking = true;
+    $scope.isChartThinking = true;
 
     if ( parseAccountIdFromLocation() != 0 ) {
         // We must be embedded in account.html.  Fetch account trans.
@@ -1043,13 +1339,15 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .factory("Datastore", [ "$http", "Logger",
                function( $http,   Logger ) {
 
+    var logger = Logger.getLogger("Datastore");
+
     /**
      * Fetch the list of tags from the db.
      *
      * @return promise, fulfilled with tags list
      */
     var fetchTags = function() {
-        Logger.info("Datastore.fetchTags: ");
+        logger.info("Datastore.fetchTags: ");
         return $http.get( "/tags" )
                     .then( function success(response) {
                                // response.data – {string|Object} – The response body transformed with the transform functions.
@@ -1057,10 +1355,10 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                // response.headers – {function([headerName])} – Header getter function.
                                // resposne.config – {Object} – The configuration object that was used to generate the request.
                                // response.statusText – {string} – HTTP status text of the response.
-                               Logger.fine( "Datastore.fetchTags: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "Datastore.fetchTags: response=" + JSON.stringify(response,null,2));
                                return response.data ;
                            }, function error(response) {
-                               Logger.severe("Datastore.fetchTags: GET /tags: response=" + JSON.stringify(response)); 
+                               logger.severe("Datastore.fetchTags: GET /tags: response=" + JSON.stringify(response)); 
                            } );
     };
 
@@ -1070,7 +1368,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise, fulfilled by the account record.
      */
     var fetchAccount = function( accountId ) {
-        Logger.info("Datastore.fetchAccount: accountId=" + accountId);
+        logger.info("Datastore.fetchAccount: accountId=" + accountId);
 
         // Promises:
         // $http.get returns a Promise.
@@ -1082,11 +1380,11 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         // The value returned from the success callback becomes the "fulfillment value" for the chained Promise.
         return $http.get( "/accounts/" + accountId)
                     .then( function success(response) {
-                               Logger.fine( "Datastore.fetchAccount: /accounts/" + accountId + ": response=" + JSON.stringify(response));
+                               logger.fine( "Datastore.fetchAccount: /accounts/" + accountId + ": response=" + JSON.stringify(response));
                                return response.data;
                            }, 
                            function error(response) {
-                               Logger.severe("Datastore.fetchAccount: GET /account/" + accountId + ": response=" + JSON.stringify(response)); 
+                               logger.severe("Datastore.fetchAccount: GET /account/" + accountId + ": response=" + JSON.stringify(response)); 
                            });
     };
 
@@ -1094,14 +1392,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise, fulfilled by the accountTimeSeries records.
      */
     var fetchAccountTimeSeries = function( accountId ) {
-        Logger.info("Datastore.fetchAccountTimeSeries: accountId=" + accountId);
+        logger.info("Datastore.fetchAccountTimeSeries: accountId=" + accountId);
         return $http.get( "/accounts/" + accountId + "/timeseries")
                     .then( function success(response) {
-                               Logger.fine( "Datastore.fetchAccountTimeSeries: /accounts/" + accountId + "/timeseries: response=" + JSON.stringify(response));
+                               logger.fine( "Datastore.fetchAccountTimeSeries: /accounts/" + accountId + "/timeseries: response=" + JSON.stringify(response));
                                return response.data;
                            }, 
                            function error(response) {
-                               Logger.severe("Datastore.fetchAccountTimeSeries: GET /account/" + accountId + "/timeseries: response=" + JSON.stringify(response)); 
+                               logger.severe("Datastore.fetchAccountTimeSeries: GET /account/" + accountId + "/timeseries: response=" + JSON.stringify(response)); 
                            });
     };
 
@@ -1109,15 +1407,15 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise, fulfilled by the account's tran records.
      */
     var fetchAccountTrans = function( accountId ) {
-        Logger.info("Datastore.fetchAccountTrans: accountId=" + accountId);
+        logger.info("Datastore.fetchAccountTrans: accountId=" + accountId);
         return $http.get( "/accounts/" + accountId + "/transactions")
                     .then( function success(response) {
-                               Logger.info( "Datastore.fetchAccountTrans: /accounts/" + accountId + "/transactions: length=" + response.data.length );
-                               Logger.fine( "Datastore.fetchAccountTrans: /accounts/" + accountId + "/transactions: response=" + JSON.stringify(response));
+                               logger.info( "Datastore.fetchAccountTrans: /accounts/" + accountId + "/transactions: length=" + response.data.length );
+                               logger.fine( "Datastore.fetchAccountTrans: /accounts/" + accountId + "/transactions: response=" + JSON.stringify(response));
                                return response.data;
                            }, 
                            function error(response) {
-                               Logger.severe("Datastore.fetchAccountTrans: GET /account/" + accountId + "/transactions: response=" + JSON.stringify(response)); 
+                               logger.severe("Datastore.fetchAccountTrans: GET /account/" + accountId + "/transactions: response=" + JSON.stringify(response)); 
                            });
     };
 
@@ -1127,13 +1425,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchAccounts = function() {
-        Logger.info("Datastore.fetchAccounts:");
+        logger.info("Datastore.fetchAccounts:");
         return $http.get( "/accounts" )
                     .then( function success(response) {
-                               Logger.fine( "Datastore.fetchAccounts: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "Datastore.fetchAccounts: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               Logger.severe("Datastore.fetchAccounts: GET /accounts: response=" + JSON.stringify(response)); 
+                               logger.severe("Datastore.fetchAccounts: GET /accounts: response=" + JSON.stringify(response)); 
                            } );
     };
 
@@ -1143,15 +1441,15 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchActiveAccounts = function() {
-        Logger.info("Datastore.fetchActiveAccounts:");
+        logger.info("Datastore.fetchActiveAccounts:");
         var postData = { "query": { "isActive": true } };
 
         return $http.post( "/query/accounts", postData )
                     .then( function success(response) {
-                               Logger.fine( "Datastore.fetchActiveAccounts: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "Datastore.fetchActiveAccounts: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               Logger.severe("Datastore.fetchActiveAccounts: POST /query/accounts: response=" + JSON.stringify(response)); 
+                               logger.severe("Datastore.fetchActiveAccounts: POST /query/accounts: response=" + JSON.stringify(response)); 
                            } );
     };
     
@@ -1161,7 +1459,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchNewTrans = function() {
-        Logger.info("Datastore.fetchNewTrans:");
+        logger.info("Datastore.fetchNewTrans:");
         var postData = { "query": { "$or": [ { "hasBeenAcked": { "$exists": false } }, { "hasBeenAcked" : false } ] },
                          "options": { "sort": { "timestamp": -1 } } 
                        };
@@ -1186,13 +1484,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var fetchTrans = function( postData ) {
         postData = setIsResolved(postData);
-        Logger.info("Datastore.fetchTrans: postData=" + JSON.stringify(postData) );
+        logger.info("Datastore.fetchTrans: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions", postData )
                     .then( function success(response) {
-                               Logger.fine( "Datastore.fetchTrans: response=" + JSON.stringify(response,null,2));
+                               logger.info( "Datastore.fetchTrans: response.length=" + response.data.length);
+                               logger.fine( "Datastore.fetchTrans: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               Logger.severe("Datastore.fetchTrans: POST /query/transactions"
+                               logger.severe("Datastore.fetchTrans: POST /query/transactions"
                                                                     + ", postData=" + JSON.stringify(postData) 
                                                                     + ", response=" + JSON.stringify(response));
                            } );
@@ -1205,13 +1504,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var fetchTransCount = function( postData ) {
         postData = setIsResolved(postData);
-        Logger.info("Datastore.fetchTransCount: postData=" + JSON.stringify(postData) );
+        logger.info("Datastore.fetchTransCount: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions/count", postData )
                     .then( function success(response) {
-                               Logger.fine( "Datastore.fetchTrans: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "Datastore.fetchTrans: response=" + JSON.stringify(response,null,2));
                                return response.data[0];
                            }, function error(response) {
-                               Logger.severe("Datastore.fetchTrans: POST /query/transactions/count"
+                               logger.severe("Datastore.fetchTrans: POST /query/transactions/count"
                                                                     + ", postData=" + JSON.stringify(postData) 
                                                                     + ", response=" + JSON.stringify(response));
                            } );
@@ -1224,13 +1523,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var fetchTransSummary = function( postData ) {
         postData = setIsResolved(postData);
-        Logger.info("Datastore.fetchTransSummary: postData=" + JSON.stringify(postData) );
+        logger.info("Datastore.fetchTransSummary: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions/summary", postData )
                     .then( function success(response) {
-                               Logger.fine( "Datastore.fetchTransSummary: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "Datastore.fetchTransSummary: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               Logger.severe("Datastore.fetchTranSummary: POST /query/transactions/summary"
+                               logger.severe("Datastore.fetchTranSummary: POST /query/transactions/summary"
                                                                     + ", postData=" + JSON.stringify(postData) 
                                                                     + ", response=" + JSON.stringify(response));
                            } );
@@ -1245,13 +1544,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var putTran = function(tranId, putData) {
 
-        Logger.info("Datastore.putTran: tranId=" + tranId + ", putData=" + JSON.stringify(putData));
+        logger.info("Datastore.putTran: tranId=" + tranId + ", putData=" + JSON.stringify(putData));
 
         return $http.put( "/transactions/" + tranId, putData )
                     .then( function success(response) {
-                               Logger.fine( "Datastore.putTran: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "Datastore.putTran: response=" + JSON.stringify(response,null,2));
                            }, function error(response) {
-                               Logger.severe("Datastore.putTran: PUT /transactions/" + tranId + ": response=" + JSON.stringify(response)); 
+                               logger.severe("Datastore.putTran: PUT /transactions/" + tranId + ": response=" + JSON.stringify(response)); 
                            } );
     };
 
@@ -1261,14 +1560,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchSavedQueries = function() {
-        Logger.info("Datastore.fetchSavedQueries: ");
+        logger.info("Datastore.fetchSavedQueries: ");
 
         return $http.get( "/savedqueries" )
                     .then( function success(response) {
-                               Logger.fine( "Datastore.fetchSavedQueries: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "Datastore.fetchSavedQueries: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               Logger.severe("Datastore.fetchSavedQueries: GET /savedqueries: response=" + JSON.stringify(response)); 
+                               logger.severe("Datastore.fetchSavedQueries: GET /savedqueries: response=" + JSON.stringify(response)); 
                            } );
     };
 
@@ -1277,12 +1576,12 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var saveQuery = function(savedQuery) {
-        Logger.info("Datastore.saveQuery: savedQuery=" + JSON.stringify(savedQuery) );
+        logger.info("Datastore.saveQuery: savedQuery=" + JSON.stringify(savedQuery) );
         return $http.post( "/savedqueries", savedQuery)
                     .then( function success(response) {
-                               Logger.fine( "Datastore.saveQuery: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "Datastore.saveQuery: response=" + JSON.stringify(response,null,2));
                            }, function error(response) {
-                               Logger.severe("Datastore.saveQuery: POST /savedqueries: postData=" + JSON.stringify(savedQuery)
+                               logger.severe("Datastore.saveQuery: POST /savedqueries: postData=" + JSON.stringify(savedQuery)
                                                                       + "response=" + JSON.stringify(response)); 
                            } );
     };
@@ -1310,11 +1609,12 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
 
 /**
- * TODO: put various stuff in here until better homes can be found.
- *       like an orphanage.  or Foster care.
+ * Put various stuff in here until better homes can be found.
  */
 .factory( "MiscUtils", [ "Logger", 
                  function(Logger) {
+
+    var logger = Logger.getLogger("MiscUtils");
 
     /**
      * @return the givn currency string convered to a number.
@@ -1332,7 +1632,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                  return memo + obj[fieldName]
                              }, 
                              0);
-        Logger.fine("MiscUtils.sumField: fieldName=" + fieldName + ": " + retMe);
+        logger.fine("MiscUtils.sumField: fieldName=" + fieldName + ": " + retMe);
         return retMe;
     };
 
@@ -1354,7 +1654,10 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 /**
  * Chart utils.
  */
-.factory( "ChartUtils", [ function() {
+.factory( "ChartUtils", [ "Logger", 
+                  function(Logger) {
+
+    var logger = Logger.getLogger("ChartUtils");
 
     /**
      * @return a new array, same size as the given array, with at most num elements
@@ -1369,12 +1672,12 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return a new array, same size as the given array, where everyNth element 
      *         is copied over from the given array to the returned array, and every
      *         other element in between is replaced with the given replaceValue 
-     *         Note: the first element is always copied over.
+     *         Note: the first and last element are always copied over.
      */
     var sampleEveryNthAndReplace = function( arr, everyNth, replaceValue) {
         var retMe = new Array(arr.length);
         for (var i=0; i < arr.length; ++i) {
-            if (i % everyNth == 0) {
+            if (i % everyNth == 0 || i == arr.length-1) {
                 retMe[i] = arr[i];
             } else {
                 retMe[i] = replaceValue;
@@ -1385,12 +1688,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
     /**
      * @return a new array containing everyNth element from the given array.
-     *         Note: the first element is always included.
+     *         Note: the first and last element are always included.
      */
     var sampleEveryNth = function( arr, everyNth) {
         var retMe = [];
         for (var i=0; i < arr.length; ++i) {
-            if (i % everyNth == 0) {
+            // always include the last element
+            if (i % everyNth == 0 || i == arr.length-1) {
                 retMe.push(arr[i]);
             }
         }
@@ -1402,6 +1706,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      *         if value < 0, barcolor=red; else barcolor=green
      */
     var createBarColors = function( values ) {
+        logger.info("ChartUtils.createBarColors: values.length=" + (values || []).length);
         var barColors = new Array(values.length);
         for (var i=0; i < values.length; ++i) {
             if (values[i] < 0) {
@@ -1421,6 +1726,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
             theChart.datasets[0].bars[i].fillColor = barColors[i];
         }
         theChart.update();
+        logger.info("ChartUtils.setBarColors: chart updated");
     };
 
     /**
@@ -1442,6 +1748,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .factory( "DateUtils", [ "Logger", "dateFilter",
                  function(Logger,   dateFilter ) {
 
+    var logger = Logger.getLogger( "DateUtils", { info: false, fine: false} );
+
     /**
      * @param timestamp
      * @return formatted date string
@@ -1458,10 +1766,24 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
     };
     
+    /**
+     * Angular dateFilter formats: https://github.com/angular/angular.js/blob/dc57fe97e1be245fa08f25143302ee9dd850c5c9/src/ng/filter/filters.js#L310
+     * @return e.g: "1/5/16"
+     */
     var formatDateLabel = function( d ) {
         return dateFilter(d, "M/d/yy");
         // return d.toLocaleFormat('%m.%d.%y');
     };
+
+    /**
+     * Angular dateFilter formats: https://github.com/angular/angular.js/blob/dc57fe97e1be245fa08f25143302ee9dd850c5c9/src/ng/filter/filters.js#L310
+     * @return e.g: "Jan 2016"
+     */
+    var formatMonthLabel = function(d) {
+        var monthLabel = dateFilter(d, "MMM yyyy");
+        logger.fine("DateUtils.formatMonthLabel: " + monthLabel );
+        return monthLabel;
+    }
 
     /**
      * @param datepart 'y', 'w', 'd', 'h', 'm', 's'
@@ -1478,21 +1800,16 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
-     * @param timestamp_s
-     */
-    var createDateLabels_s = function( timestamp_s ) {
-        return createDateLabels( new Date(timestamp_s * 1000) );
-    }
-
-    /**
      * @param fromDate
+     * @param toDate
+     *
      * @return an array of date labels between fromDate and toDate
      */
     var createDateLabels = function( fromDate, toDate ) {
 
         var daysBetween = dateDiff('d', fromDate, toDate);
 
-        Logger.info("DateUtils.createDateLabels: fromDate=" + formatDateLabel(fromDate) 
+        logger.info("DateUtils.createDateLabels: fromDate=" + formatDateLabel(fromDate) 
                                             + ", toDate=" + formatDateLabel(toDate) 
                                             + ", daysBetween=" + daysBetween );
 
@@ -1503,13 +1820,44 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
             fromDate.setDate( fromDate.getDate() + 1);
         }
 
-        Logger.fine("DateUtils.createDateLabels: retMe=" + JSON.stringify(retMe));
+        logger.info("DateUtils.createDateLabels: retMe=" + JSON.stringify(retMe));
         return retMe;
 
     };
 
+    /**
+     * @param fromDate
+     * @param toDate
+     *
+     * @return an array of month labels between fromDate and toDate
+     */
+    var createMonthLabels = function( fromDate, toDate ) {
+
+        logger.info("DateUtils.createMonthLabels: fromDate=" + formatDateLabel(fromDate) 
+                                             + ", toDate=" + formatDateLabel(toDate)  );
+
+        var retMe = [];
+
+        var currDate = fromDate;
+        currDate.setDate(1);
+
+        var i=0;    // trying to avoid infinite loops.
+        for ( ;
+              currDate <= toDate ;
+              currDate.setMonth( currDate.getMonth() + 1 ) && ++i < 1000) {
+            logger.fine("DateUtils.createMonthLabel: currDate=" + formatDateLabel(currDate) );
+            retMe.push( formatMonthLabel( currDate ) );
+        }
+
+        logger.info("DateUtils.createMonthLabels: retMe=" + JSON.stringify(retMe));
+        return retMe;
+    };
+
+
     return {
         createDateLabels: createDateLabels,
+        createMonthLabels: createMonthLabels,
+        formatMonthLabel: formatMonthLabel,
         formatEpochAsDate: formatEpochAsDate,
         dateDiff: dateDiff
     };

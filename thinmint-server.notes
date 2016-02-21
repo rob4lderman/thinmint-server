@@ -7,7 +7,7 @@ TODO: tran query page (filter by account, by tag, by merchant?, by date range, b
       date: after 01/01/16 and before 02/02/16
       amount: over 30.00 or under 10
 
-TODO: more javascript charts!!! for trans.  barchart by tag.  barchart by month ,etc.
+TODO: more javascript charts!!!   what else?
     
 
 TODO: don't create a new accountsTimeSeries record if the balance hasn't changed since the last one.
@@ -27,8 +27,9 @@ done: match up pending trans with completed trans  (cross ref via linkedTranIds 
 TODO: account "nickname" - display in trans
 
         
-TODO: all investments trans have txnType=1, everything else txnType=0
+done: all investments trans have txnType=1, everything else txnType=0
       technically this is "income" too... 
+      autotag! "investment"
 
 
 

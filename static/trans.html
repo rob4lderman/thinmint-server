@@ -45,9 +45,15 @@
 
         <div class="row">
             <div class="tm-portal">
-                <h3>Time Series: Transactions</h3>
-                <div class="text-center">
-                    <canvas id="tranChart" width="1000" height="400"></canvas>
+                <h3>Chart: Transactions 
+                    <small>(<a href="" ng-click="renderChartByTime(chartTrans)">by time</a>)</small> 
+                    <small>(<a href="" ng-click="renderChartByTags(chartTrans)">by tags</a>)</small>
+                </h3>
+                <div class="text-center" >
+                    <div> 
+                        <img src="icons/thinking.gif" ng-if="isChartThinking"/>
+                    </div>
+                    <canvas id="tm-tran-canvas-element" width="1000" height="100" ></canvas>
                 </div>
             </div>
         </div>
@@ -55,7 +61,9 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="tm-portal">
-                    <h4>Tag Filter <small><a href="" ng-init="showTagList=false" ng-click="showTagList = !showTagList">(show all)</a></small></h4>
+                    <h4>Tag Filter 
+                        <small>(<a href="" ng-init="showTagList=false" ng-click="showTagList = !showTagList">show all</a>)</small>
+                    </h4>
                     <div ng-if="showTagList" class="tm-show-tags-list" >
                         <span ng-repeat="tag in tags | orderBy " class="span-tag">{{tag}} </span>
                     </div>
@@ -139,9 +147,9 @@
                         <th></th>
                     </tr>
                 </table>
-                <img src="icons/thinking.gif" ng-if="thinking"/>
-                <button ng-if="!areAllTransFetched && !thinking" class="btn btn-info btn-sm" ng-click="fetchNextPage()">more</button>
-                <button ng-if="!areAllTransFetched && !thinking" class="btn btn-info btn-sm tm-fetch-all-trans-button" ng-click="fetchAllRemainingTrans()">all</button>
+                <img src="icons/thinking.gif" ng-if="isThinking"/>
+                <button ng-if="!areAllTransFetched && !isThinking" class="btn btn-info btn-sm" ng-click="fetchNextPage()">more</button>
+                <!-- button ng-if="!areAllTransFetched && !isThinking" class="btn btn-info btn-sm tm-fetch-all-trans-button" ng-click="fetchAllRemainingTrans()">all</button -->
             </div>
         </div>
     </div>

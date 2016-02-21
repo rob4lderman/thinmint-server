@@ -44,27 +44,40 @@
     <div class="container" ng-controller="AccountController">
 
         <!-- account summary -->
-        <div class="tm-portal">
+        <div class="tm-portal tm-account-summary">
             <h3>Account Summary</h3>
             <table class="table table-condensed table-hover tm-account-list">
                 <tr ng-include="'templates/account-th.html'"></tr>
                 <tr ng-include="'templates/account-tr.html'"></tr>
             </table>
+            <div class="text-center"> 
+                <img src="icons/thinking.gif" ng-if="isThinking"/>
+            </div>
         </div>
 
         <!-- account charts -->
         <div class="tm-portal">
             <h3>Time Series: Account Balance</h3>
             <div class="text-center">
-                <canvas id="valueChart" width="1000" height="400"></canvas>
+                <div> 
+                    <img src="icons/thinking.gif" ng-if="isChartThinking"/>
+                </div>
+                <canvas id="valueChart" width="1000" height="100"></canvas>
             </div>
         </div>
 
         <div ng-controller="TranQueryController">
             <div class="tm-portal">
-                <h3>Time Series: Transactions</h3>
+                <h3>Chart: Transactions 
+                    <small>(<a href="" ng-click="renderChartByTime(chartTrans)">by time</a>)</small> 
+                    <small>(<a href="" ng-click="renderChartByTags(chartTrans)">by tags</a>)</small>
+                </h3>
+
                 <div class="text-center">
-                    <canvas id="tranChart" width="1000" height="400"></canvas>
+                    <div> 
+                        <img src="icons/thinking.gif" ng-if="isChartThinking"/>
+                    </div>
+                    <canvas id="tm-tran-canvas-element" width="1000" height="100"></canvas>
                 </div>
             </div>
 
@@ -83,9 +96,9 @@
                         <th></th>
                     </tr>
                 </table>
-                <img src="icons/thinking.gif" ng-if="thinking"/>
-                <button ng-if="!areAllTransFetched && !thinking" class="btn btn-info btn-sm" ng-click="fetchNextPage()">more</button>
-                <button ng-if="!areAllTransFetched && !thinking" class="btn btn-info btn-sm tm-fetch-all-trans-button" ng-click="fetchAllRemainingTrans()">all</button>
+                <img src="icons/thinking.gif" ng-if="isThinking"/>
+                <button ng-if="!areAllTransFetched && !isThinking" class="btn btn-info btn-sm" ng-click="fetchNextPage()">more</button>
+                <!-- button ng-if="!areAllTransFetched && !isThinking" class="btn btn-info btn-sm tm-fetch-all-trans-button" ng-click="fetchAllRemainingTrans()">all</button -->
             </div>
         </div>
     </div>
