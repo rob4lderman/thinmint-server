@@ -57,6 +57,15 @@ h3 .tm-grand-total {
     float: right;
 }
 
+.tm-account-due-amt {
+    font-size: small;
+    margin-left: 5px;
+}
+
+.tm-account-due-amt b {
+    color: red;
+}
+
 /* make it same width as the "more" button */
 button.tm-fetch-all-trans-button {
     width: 50px;

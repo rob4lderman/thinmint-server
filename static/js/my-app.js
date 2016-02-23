@@ -21,7 +21,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                                  function(account) { 
                                                      return account.accountType == "credit" || account.accountType == "bank";
                                                  } );
-        $scope.bankAndCreditAccounts = _.sortBy( $scope.bankAndCreditAccounts, "fiName" );
 
         setAccountSums($scope.bankAndCreditAccountsSums, $scope.bankAndCreditAccounts);
 
@@ -29,7 +28,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                                  function(account) { 
                                                      return ! (account.accountType == "credit" || account.accountType == "bank");
                                                  } );
-        $scope.investmentAccounts = _.sortBy( $scope.investmentAccounts, "fiName" );
         setAccountSums($scope.investmentAccountsSums, $scope.investmentAccounts);
     };
 
@@ -75,6 +73,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     $scope.investmentAccounts = {};
     $scope.investmentAccountsSums = {};
     $scope.DateUtils = DateUtils;
+    $scope.MiscUtils = MiscUtils;
     $scope.getNetWorth = getNetWorth;
     $scope.getNetWorthPerf = getNetWorthPerf;
     $scope.sumField = sumField;
@@ -491,6 +490,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Export to scope.
      */
     $scope.DateUtils = DateUtils;
+    $scope.MiscUtils = MiscUtils;
     $scope.isChartThinking = true;
     $scope.isThinking = true;
 
@@ -957,7 +957,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var buildOptionsForAllRemainingTrans = function( page, pageSize ) {
         return { "sort": { "timestamp": -1 },
-                 "skip": page * pageSize
+                 "skip": page * pageSize,
+                 "fields": Datastore.getTranFieldProjection()
                } ;
     };
 
@@ -968,7 +969,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     var buildOptionsForNextPageOfTrans = function( page, pageSize ) {
         return { "sort": { "timestamp": -1 },
                  "limit": pageSize,
-                 "skip": page * pageSize
+                 "skip": page * pageSize,
+                 "fields": Datastore.getTranFieldProjection()
                } ;
     };
 
@@ -1342,7 +1344,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .factory("Datastore", [ "$http", "Logger",
                function( $http,   Logger ) {
 
-    var logger = Logger.getLogger("Datastore");
+    var logger = Logger.getLogger("Datastore" /* , { info: true, fine: true } */);
 
     /**
      * Fetch the list of tags from the db.
@@ -1423,6 +1425,27 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
+     * TODO: use this.
+     * @return the typical account fields to fetch
+     */
+    var getAccountFieldProjection = function() {
+        return [  "accountType",
+                  "currentBalance",
+                  "value",
+                  "accountId",
+                  "fiName",
+                  "accountName",
+                  "dueAmt",
+                  "dueDate",
+                  "last7days",
+                  "last30days",
+                  "last90days",
+                  "last365days",
+                  "fiLastUpdated"
+               ];
+    };
+
+    /**
      * fetch accounts from db 
      *
      * @return promise
@@ -1445,7 +1468,11 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var fetchActiveAccounts = function() {
         logger.info("Datastore.fetchActiveAccounts:");
-        var postData = { "query": { "isActive": true } };
+        var postData = { "query": { "isActive": true },
+                         "options": { "sort": { "fiName": 1 },
+                                      "fields": getAccountFieldProjection() 
+                                    } 
+                       };
 
         return $http.post( "/query/accounts", postData )
                     .then( function success(response) {
@@ -1463,8 +1490,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var fetchNewTrans = function() {
         logger.info("Datastore.fetchNewTrans:");
-        var postData = { "query": { "$or": [ { "hasBeenAcked": { "$exists": false } }, { "hasBeenAcked" : false } ] },
-                         "options": { "sort": { "timestamp": -1 } } 
+        var postData = { "query": { "$or": [ { "hasBeenAcked": { "$exists": false } }, 
+                                             { "hasBeenAcked" : false } 
+                                           ] 
+                                  },
+                         "options": { "sort": { "timestamp": -1 },
+                                      "fields": getTranFieldProjection() 
+                                    } 
                        };
         return fetchTrans( postData );
     };
@@ -1478,6 +1510,23 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         postData.query = postData.query || {};
         postData.query.isResolved = { "$exists": false } ;
         return postData;
+    };
+
+    /**
+     * @return the typical tran fields to fetch.
+     */
+    var getTranFieldProjection = function() {
+        return [ "_id",
+                 "date", 
+                 "isDebit",
+                 "isPending",
+                 "isTransfer",
+                 "amount",
+                 "amountValue",
+                 "merchant",
+                 "omerchant",
+                 "account",
+                 "tags" ];
     };
 
     /**
@@ -1593,6 +1642,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * export
      */
     return {
+        getTranFieldProjection: getTranFieldProjection,
         fetchTags: fetchTags,
         fetchAccount: fetchAccount,
         fetchAccountTrans: fetchAccountTrans,
@@ -1646,10 +1696,18 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         return angular.isUndefined(s) || !s || s.trim().length == 0;
     };
 
+    /**
+     * @return true if the parm is defined
+     */
+    var isDefined = function(x) {
+        return angular.isDefined(x);
+    };
+
     return {
         currencyToNumber: currencyToNumber,
         sumField: sumField,
-        isEmpty: isEmpty
+        isEmpty: isEmpty,
+        isDefined: isDefined
     };
 }])
 

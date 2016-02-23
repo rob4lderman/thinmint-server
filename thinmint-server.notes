@@ -8,8 +8,9 @@ TODO: tran query page (filter by account, by tag, by merchant?, by date range, b
       amount: over 30.00 or under 10
 
 TODO: more javascript charts!!!   what else?
-    
 
+TODO: EXclude tags from query
+    
 TODO: don't create a new accountsTimeSeries record if the balance hasn't changed since the last one.
 
 
@@ -23,8 +24,32 @@ done: match up pending trans with completed trans  (cross ref via linkedTranIds 
             transfer tags from pending tran to completed tran 
             mark pendingTran hasBeenAcked=true, isResolved=true, linkedTranIds
 
+TODO: resolve pending trans that don't get matched up (e.g. marriot pending trans / holds )
+      the pending record will eventually get deleted by mint
+      find trans, isPending=true, isResolved=false, 
+        if not in mint trans, then mark as isResovled (or just remove them altogether - especially if they're not tagged).
+        ONE WAY TO DO THIS:
+            remove some mint field from all thinmint trans
+            upsert all mint trans 
+                - this will replace the field i removed
+            find all thinmint trans that still don't have that field (these are the trans that have been removed)
+      for resolved trans,
+         attach only 1 pendingTran to its matched up clearedTran
+         copy relevant info from pending tran into clearedTran -
+            - pendingTran: amount, amountValue, _id, date, ...
+
+      if pendingTran hasn't been acked or tagged,
+            and it's been removed from mint trans
+            then remove it from thinmint trans
+
+      NOTE: ONLY pendingTrans should disappear.  
+      NOTE: be careful if the call to mint fails and we get NO trans back...
+      
+
+
 
 TODO: account "nickname" - display in trans
+TODO: tran "memo" or "notes" field
 
         
 done: all investments trans have txnType=1, everything else txnType=0
