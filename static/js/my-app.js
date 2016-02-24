@@ -124,6 +124,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     $scope.newTrans = [];
     $scope.sumField = MiscUtils.sumField;
+    $scope.MiscUtils = MiscUtils;
 
     $scope.$on("$addTranTag", onAddTranTag );
     $scope.$on("$ackTran", onAckTran);
@@ -1300,6 +1301,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     $scope.startDate = null;
     $scope.endDate = null;
     $scope.postData = {};
+    $scope.MiscUtils = MiscUtils;
 
     /**
      * Init data
@@ -1526,7 +1528,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                  "merchant",
                  "omerchant",
                  "account",
-                 "tags" ];
+                 "tags",
+                 "pendingTran"];
     };
 
     /**

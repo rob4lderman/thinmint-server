@@ -44,12 +44,20 @@ TODO: resolve pending trans that don't get matched up (e.g. marriot pending tran
 
       NOTE: ONLY pendingTrans should disappear.  
       NOTE: be careful if the call to mint fails and we get NO trans back...
+
+      OK! SO!
+      deletedPendingTrans = db.transactions.find( { mintMarker: 0, isPending: True } )
+        # the trans have been *DELETED* from mint, so the clearedTran must be present
       
 
 
 
 TODO: account "nickname" - display in trans
 TODO: tran "memo" or "notes" field
+
+TODO: add indexes for timestamp, account, fi
+      db.transactions.createIndex( { timestamp: -1 } )
+      db.transactions.createIndex( { account: 1, fi: 1 } )
 
         
 done: all investments trans have txnType=1, everything else txnType=0

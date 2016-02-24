@@ -66,6 +66,12 @@ h3 .tm-grand-total {
     color: red;
 }
 
+.tm-resolved-pending-tran {
+    font-size: small;
+    color: #999;
+    margin-left: 10px;
+}
+
 /* make it same width as the "more" button */
 button.tm-fetch-all-trans-button {
     width: 50px;
