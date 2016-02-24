@@ -59,6 +59,7 @@ h3 .tm-grand-total {
 
 .tm-account-due-amt {
     font-size: small;
+    color: #999;
     margin-left: 5px;
 }
 
