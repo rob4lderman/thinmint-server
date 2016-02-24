@@ -11,53 +11,30 @@ TODO: more javascript charts!!!   what else?
 
 TODO: EXclude tags from query
     
-TODO: don't create a new accountsTimeSeries record if the balance hasn't changed since the last one.
+TODO: don't create a new accountsTimeSeries record if the balance hasn't changed since the last one...
+      or... remove the last one and insert a new one with the current day?
 
 
-done: match up pending trans with completed trans  (cross ref via linkedTranIds field)
-      note: looks like mint will do that for you 
-            mint deletes isPending trans once they're matched up
+done: match up pending trans with completed trans  
+      note: mint deletes isPending trans once they're matched up
             should i also delete pending trans once they've been matched?
             basically every tran that i have but mint doesn't is probably an isPending that's been removed.
             i.e. all my isPending=true trans will eventually be deleted by mint
             check those trans against the new ones to find a match
-            transfer tags from pending tran to completed tran 
-            mark pendingTran hasBeenAcked=true, isResolved=true, linkedTranIds
-
-TODO: resolve pending trans that don't get matched up (e.g. marriot pending trans / holds )
-      the pending record will eventually get deleted by mint
-      find trans, isPending=true, isResolved=false, 
-        if not in mint trans, then mark as isResovled (or just remove them altogether - especially if they're not tagged).
-        ONE WAY TO DO THIS:
-            remove some mint field from all thinmint trans
-            upsert all mint trans 
-                - this will replace the field i removed
-            find all thinmint trans that still don't have that field (these are the trans that have been removed)
-      for resolved trans,
-         attach only 1 pendingTran to its matched up clearedTran
-         copy relevant info from pending tran into clearedTran -
-            - pendingTran: amount, amountValue, _id, date, ...
-
-      if pendingTran hasn't been acked or tagged,
-            and it's been removed from mint trans
-            then remove it from thinmint trans
-
-      NOTE: ONLY pendingTrans should disappear.  
-      NOTE: be careful if the call to mint fails and we get NO trans back...
-
-      OK! SO!
-      deletedPendingTrans = db.transactions.find( { mintMarker: 0, isPending: True } )
-        # the trans have been *DELETED* from mint, so the clearedTran must be present
-      
+            transfer tags + other fields from pending tran to completed tran 
+            remove pendingTran 
 
 
 
 TODO: account "nickname" - display in trans
 TODO: tran "memo" or "notes" field
 
-TODO: add indexes for timestamp, account, fi
+done: add indexes for timestamp, account, fi
       db.transactions.createIndex( { timestamp: -1 } )
       db.transactions.createIndex( { account: 1, fi: 1 } )
+      db.transactions.update( {}, { "$unset": { "isResolved": "" } }, { "multi": true} )
+      ./mintclient.py import
+      ./mintclient.py resolve
 
         
 done: all investments trans have txnType=1, everything else txnType=0

@@ -157,9 +157,10 @@ form.div-ack {
     font-size: large;
 }
 
-tr td.new-tran-ispending {
+tr td.tran-ispending {
     font-size: small;
-    vertical-align: middle !important;
+    vertical-align: top !important;
+    padding-top: 7px !important;
 }
 
 [tm-is-debit] {

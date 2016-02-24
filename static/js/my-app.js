@@ -1292,6 +1292,19 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     $scope.$on("$loadSavedQuery", onLoadSavedQuery);
 
     /**
+     * Listens for $addTranTag events.
+     */
+    var onAddTranTag = function(theEvent, tag) {
+        logger.info("TranQueryController.onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
+
+        if ( ! _.contains($scope.tags, tag) ) {
+            $scope.tags.push(tag);
+        }
+    };
+
+    $scope.$on("$addTranTag", onAddTranTag );
+
+    /**
      * Export to scope.
      */
     $scope.addTag = addTag;
@@ -1504,15 +1517,15 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
 
-    /**
-     * We pretty much never want to get pending trans that have been resolved
-     * to cleared trans.  (mint actually deletes pending trans once they've been cleared).
-     */
-    var setIsResolved = function(postData) {
-        postData.query = postData.query || {};
-        postData.query.isResolved = { "$exists": false } ;
-        return postData;
-    };
+    // -rx- /**
+    // -rx-  * We pretty much never want to get pending trans that have been resolved
+    // -rx-  * to cleared trans.  (mint actually deletes pending trans once they've been cleared).
+    // -rx-  */
+    // -rx- var setIsResolved = function(postData) {
+    // -rx-     postData.query = postData.query || {};
+    // -rx-     postData.query.isResolved = { "$exists": false } ;
+    // -rx-     return postData;
+    // -rx- };
 
     /**
      * @return the typical tran fields to fetch.
@@ -1538,7 +1551,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchTrans = function( postData ) {
-        postData = setIsResolved(postData);
+        // -rx- postData = setIsResolved(postData);
         logger.info("Datastore.fetchTrans: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions", postData )
                     .then( function success(response) {
@@ -1558,7 +1571,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise fullfilled with the count
      */
     var fetchTransCount = function( postData ) {
-        postData = setIsResolved(postData);
+        // -rx- postData = setIsResolved(postData);
         logger.info("Datastore.fetchTransCount: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions/count", postData )
                     .then( function success(response) {
@@ -1577,7 +1590,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise fullfilled with the summary
      */
     var fetchTransSummary = function( postData ) {
-        postData = setIsResolved(postData);
+        // -rx- postData = setIsResolved(postData);
         logger.info("Datastore.fetchTransSummary: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions/summary", postData )
                     .then( function success(response) {
