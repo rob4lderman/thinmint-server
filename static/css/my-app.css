@@ -254,4 +254,14 @@ li.filtered-tag {
 }
 
 
+.tm-tran-canvas-thinking {
+    position: relative;
+}
+
+.tm-tran-canvas-thinking img {
+    position: absolute;
+    height: 100px;
+    top: 20px;
+    left: 20px;
+}
 

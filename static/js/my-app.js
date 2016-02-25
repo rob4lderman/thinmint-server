@@ -455,7 +455,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         };
 
         // Get the context of the canvas element we want to select
-        chartCanvasElement.setAttribute("height", "350");
+        // -rx- chartCanvasElement.setAttribute("height", "350");
         theChart = new Chart(chartCanvasElement.getContext("2d"))
                          .Line(data, { responsive: true });
     };
@@ -756,7 +756,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         };
 
         // Get the context of the canvas element we want to select
-        tranCanvasElement.setAttribute("height", "350");
+        // -rx- tranCanvasElement.setAttribute("height", "350");
         tranChart = new Chart(tranCanvasElement.getContext("2d"))
                                     .Bar(data, { responsive: true });
 
