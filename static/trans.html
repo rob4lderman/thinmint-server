@@ -46,7 +46,7 @@
 <body>
     <div id="tm-page-header" class="container-fluid">
         <div class="container">
-            <a href="/">Thinmint</a>
+            <a href="/">Home</a>
             <a href="/trans.html">Transactions</a>
         </div>
     </div>
@@ -71,7 +71,7 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="tm-portal">
-                    <h4>Tag Filter 
+                    <h4>Tag Inclusion Filter 
                         <small>(<a href="" ng-init="showTagList=false" ng-click="showTagList = !showTagList">show all</a>)</small>
                     </h4>
                     <div ng-if="showTagList" class="tm-show-tags-list" >
@@ -98,6 +98,36 @@
             </div>
             <div class="col-md-6">
                 <div class="tm-portal">
+                    <h4>Tag Exclusion Filter 
+                        <small>(<a href="" ng-init="showTagList=false" ng-click="showTagExcludeList = !showTagExcludeList">show all</a>)</small>
+                    </h4>
+                    <div ng-if="showTagExcludeList" class="tm-show-tags-list" >
+                        <span ng-repeat="tag in tags | orderBy " class="span-tag">{{tag}} </span>
+                    </div>
+                    <div class="tm-tag-filter-list">
+                        <span ng-repeat="tag in tagsExcludeFilter" class="span-tag">
+                            {{tag}}
+                            <a class="span-tag-x" href="" ng-click="removeTagExclude(tag)">x</a>
+                        </span>
+                        <form class="form-tag" ng-submit="addTagExclude()" >
+                            <input type="text" 
+                                   id="input-tag-{{tran._id}}"
+                                   class="tm-input-tag form-control input-sm" 
+                                   pu-elastic-input 
+                                   style="min-width: 100px; max-width: 150px;"
+                                   ng-model="inputTagExcludeFilter" 
+                                   tm-auto-fill="tags"
+                                   placeholder="+"
+                                   autocomplete="off" />
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="tm-portal">
                     <h4>Date Filter</h4>
                     <div class="text-center">
                         <md-datepicker ng-model="startDate" md-placeholder="Start"></md-datepicker>
@@ -106,17 +136,32 @@
                     </div>
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="tm-portal">
+                    <h4>Merchant Filter</h4>
+                    <div class="tm-merchant-filter">
+                        <input type="text" 
+                               id="input-merchant"
+                               class="form-control input-sm" 
+                               ng-model="inputMerchant" 
+                               placeholder="Name contains..."
+                               autocomplete="off" />
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="row">
             <div class="col-md-6">
                 <div class="tm-portal">
                     <h4>Run Query</h4>
-                    <button class="tm-tran-query-button btn btn-info btn-sm" ng-click="onQueryFormSubmit()">Go!</button>
+                    <div class="tm-run-query">
+                        <button class="tm-tran-query-button btn btn-info btn-sm" ng-click="onQueryFormSubmit()">Go!</button>
+                    </div>
                 </div>
             </div>
             <div class="col-md-6">
                 <form class="tm-portal tm-save-query-form" ng-controller="SaveQueryFormController" > 
-                    <h4>Load &amp; Save Query <small>(note: you must run the query first before saving it)</small></h4>
+                    <h4>Load &amp; Save Query <small>(note: you must <b>Run</b> the query before saving it)</small></h4>
                     <div class="tm-md-autocomplete">
                         <md-content>
                             <md-autocomplete md-selected-item="selectedSavedQuery" 

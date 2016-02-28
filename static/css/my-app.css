@@ -5,7 +5,7 @@
     background-color: #cfd;
     line-height: 40px;
     padding: 10px 0px;
-    font-size: 24px;
+    font-size: 18px;
 }
 
 #tm-page-footer {
@@ -97,6 +97,10 @@ button.tm-fetch-all-trans-button {
 
 .tm-input-tag {
     margin: 0 4px;
+}
+
+.tm-merchant-filter, .tm-run-query {
+    padding-bottom: 10px;
 }
 
 .tm-tag-list input {

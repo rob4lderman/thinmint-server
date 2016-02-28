@@ -274,6 +274,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                    function(_,   $parse,   Logger) {
 
     var logger = Logger.getLogger("tmAutoFill");
+
     var directiveDefiningObj = {
         require: "ngModel",
         link: function($scope, element, attrs, ngModel) {
@@ -372,6 +373,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                             function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   ChartUtils,   MiscUtils) {
 
     var logger = Logger.getLogger("AccountController");
+
     logger.info("AccountController: alive! $location.search=" + JSON.stringify($location.search()));
 
     /**
@@ -455,7 +457,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         };
 
         // Get the context of the canvas element we want to select
-        // -rx- chartCanvasElement.setAttribute("height", "350");
         theChart = new Chart(chartCanvasElement.getContext("2d"))
                          .Line(data, { responsive: true });
     };
@@ -528,11 +529,11 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     }
 
     var getLogger = function( name, options ) {
-        options = _.extend( { info: false, fine: false, severe: true }, options );
+        options = _.extend( { all: false, info: false, fine: false, severe: true }, options );
         return {
-            info: function(msg) { if (options.info) { info( name + ": " + msg); } },
-            fine: function(msg) { if (options.fine) { fine( name + ": " + msg); } },
-            severe: function(msg) { if (options.severe) { severe( name + ": " + msg); } },
+            info: function(msg) { if (options.info || options.all) { info( name + ": " + msg); } },
+            fine: function(msg) { if (options.fine || options.all) { fine( name + ": " + msg); } },
+            severe: function(msg) { if (options.severe || options.all) { severe( name + ": " + msg); } },
         };
     }
 
@@ -558,6 +559,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                 function( $scope,   _ ,  $location,   Logger,   $rootScope,   Datastore,   MiscUtils) {
 
     var logger = Logger.getLogger("SaveQueryFormController");
+
     logger.info("SaveQueryFormController: Alive!");
 
 
@@ -586,6 +588,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                             // add it back (possibly with an updated query).
                             $scope.savedQueries.push( newSavedQuery );
                             setSavedQueries( $scope.savedQueries );
+
+                            alert( "Current query saved as '" + newSavedQuery.name + "'");
                         } );
     };
 
@@ -645,10 +649,11 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 /**
  * Controller for tran lists and queries.
  */
-.controller( "TranQueryController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "MiscUtils", "ChartUtils",
-                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   MiscUtils,   ChartUtils) {
+.controller( "TranQueryController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "MiscUtils", "ChartUtils", "TranQueryBuilder",
+                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   MiscUtils,   ChartUtils,   TranQueryBuilder) {
 
-    var logger = Logger.getLogger("TranQueryController");
+    var logger = Logger.getLogger("TranQueryController", { all: false} );
+
     logger.info("TranQueryController: alive! $location.search=" + JSON.stringify($location.search()));
 
     /**
@@ -946,53 +951,17 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         logger.fine("TranQueryController.fetchAllRemainingTrans: $scope.page=" + $scope.page);
         $scope.page += 1;
 
-        $scope.postData.options = buildOptionsForAllRemainingTrans( $scope.page, $scope.pageSize );
+        $scope.postData.options = TranQueryBuilder.buildOptionsForAllRemainingTrans( $scope.page, $scope.pageSize );
 
         fetchTrans( $scope.postData )
             .then( appendTrans );
     };
 
     /**
-     * @return an options object to apply to a query that fetches
-     *         all the remaining trans.
-     */
-    var buildOptionsForAllRemainingTrans = function( page, pageSize ) {
-        return { "sort": { "timestamp": -1 },
-                 "skip": page * pageSize,
-                 "fields": Datastore.getTranFieldProjection()
-               } ;
-    };
-
-    /**
-     * @return an options object to apply to a query that fetches
-     *         the next page of trans
-     */
-    var buildOptionsForNextPageOfTrans = function( page, pageSize ) {
-        return { "sort": { "timestamp": -1 },
-                 "limit": pageSize,
-                 "skip": page * pageSize,
-                 "fields": Datastore.getTranFieldProjection()
-               } ;
-    };
-
-    /**
-     * @return an options object to apply to a query that fetches
-     *         all trans but only certain fails.
-     */
-    var buildOptionsForAmountsAndTags = function() {
-        return { "sort": { "timestamp": -1 },
-                 "fields": { "amountValue": 1,
-                             "timestamp": 1,
-                             "tags": 1
-                           }
-               } ;
-    };
-
-    /**
      * @return promise fulfilled with trans
      */
     var fetchTransByPage = function(postData, page, pageSize) {
-        postData.options = buildOptionsForNextPageOfTrans( page, pageSize );
+        postData.options = TranQueryBuilder.buildOptionsForNextPageOfTrans( page, pageSize );
         return fetchTrans( postData );
     };
 
@@ -1033,8 +1002,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise fullfilled with all trans
      */
     var fetchTranAmountsAndTags = function(postData) {
-        postData.options = buildOptionsForAmountsAndTags();
-        $scope.isChartThinkint = true;
+        postData.options = TranQueryBuilder.buildOptionsForAmountsAndTags();
+        $scope.isChartThinking = true;
         return Datastore.fetchTrans( postData );
     };
 
@@ -1063,7 +1032,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     var onQueryFormSubmit = function() {
 
         resetTranList();
-        $scope.postData.query = buildQuery();
+        $scope.postData.query = TranQueryBuilder.buildQuery($scope);
 
         reloadTrans();
     };
@@ -1094,73 +1063,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                  .then( appendTrans );
     };
 
-    /**
-     * Build a query object based on all form data.
-     *
-     * @return the query object
-     */
-    var buildQuery = function() {
-
-        var query = {};
-        var dateQuery = buildDateQuery( $scope.startDate, $scope.endDate );
-        var tagsQuery = buildTagsQuery( $scope.tagsFilter );
-
-        if ( ! _.isEmpty( dateQuery ) && ! _.isEmpty( tagsQuery ) ) {
-            query = { "$and": [ dateQuery, tagsQuery ] };
-        } else if (  ! _.isEmpty( dateQuery ) ) {
-            query = dateQuery;
-        } else if (  ! _.isEmpty( tagsQuery ) ) {
-            query = tagsQuery;
-        }
-
-        logger.info("TranQueryController.buildQuery: query=" + JSON.stringify(query) );
-        return query;
-    };
-
-    /**
-     * @return a query object of the form { "timestamp": { "$gte": startDate-timestamp, "$lte", endDate-timestamp } }.
-     *         If either startDate or endDate are null they're omitted.
-     */
-    var buildDateQuery = function(startDate, endDate) {
-        var query = {};
-        if (startDate != null) {
-            query.timestamp = query.timestamp || {};
-            query.timestamp["$gte"] = startDate.getTime() / 1000;
-        }
-
-        if (endDate != null) {
-            query.timestamp = query.timestamp || {};
-            query.timestamp["$lte"] = endDate.getTime() / 1000;
-        }
-
-        logger.info("TranQueryController.buildDateQuery: query=" + JSON.stringify(query) );
-
-        return query;
-    };
-
-    /**
-     * @return a query object for the given tags.
-     */
-    var buildTagsQuery = function( tagsFilter ) {
-        var query = {};
-        if ( tagsFilter.length > 0 ) {
-            query = { "$or": _.map( tagsFilter, function(tag) { return { "tags": tag }; } ) } ;
-            // end up with something like:
-            // { $or: [ { tags: "dining" }, {tags: "socializing"} ] }
-        }
-
-        logger.info("TranQueryController.buildTagsQuery: query=" + JSON.stringify(query) );
-        return query;
-    };
-
-    /**
-     * @return query data for the given account
-     */
-    var buildQueryFromAccount = function( account ) {
-        logger.info("TranQueryController.buildQueryFromAccount: account=" + JSON.stringify(account));
-        return {   "account": account.accountName,
-                   "fi": account.fiName };
-    };
 
     /**
      * We must be embedded in the account.html page.
@@ -1170,7 +1072,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         logger.info("TranQueryController.forAccountPage: accountId=" + accountId );
         Datastore.fetchAccount( accountId )
                  .then( function success(account) { 
-                            $scope.postData.query = buildQueryFromAccount(account); 
+                            $scope.postData.query = TranQueryBuilder.buildQueryForAccount(account); 
                             reloadTrans();
                         });
     };
@@ -1184,7 +1086,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
-     * Called when the user hits 'enter' after typing in a tag.
+     * Called from the view.
+     * Called when the user hits 'enter' after typing in a tag in the "Tags Inclusion Filter".
      * Add the tag to tagsFilter
      */
     var addTag = function() {
@@ -1202,9 +1105,32 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
             $scope.tagsFilter.push(tag);
             logger.info("TranQueryController.addTag: $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter));
         }
-    }
+    };
 
     /**
+     * Called from the view.
+     * Called when the user hits 'enter' after typing in a tag in the "Tags Exclusion Filter".
+     * Add the tag to tagsExcludeFilter
+     */
+    var addTagExclude = function() {
+        logger.info("TranQueryController.addTagExclude: " + $scope.inputTagExcludeFilter);
+        var tag = $scope.inputTagExcludeFilter;
+
+        // Clear the input field.
+        $scope.inputTagExcludeFilter = "";
+
+        if (MiscUtils.isEmpty(tag)) {
+            return;
+        }
+
+        if ( ! _.contains($scope.tagsExcludeFilter, tag) ) {
+            $scope.tagsExcludeFilter.push(tag);
+            logger.info("TranQueryController.addTagExclude: $scope.tagsExcludeFilter=" + JSON.stringify($scope.tagsExcludeFilter));
+        }
+    };
+
+    /**
+     * Called from the view.
      * Remove the tag from the tagsFilter list
      */
     var removeTag = function(tag) {
@@ -1213,68 +1139,18 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
-     * Parse the dates from the saved query and set them into the $scope
-     * which updates the view.
-     *
-     * @sideeffect sets $scope.startDate and/or $scope.endDate
+     * Called from the view.
+     * Remove the tag from the tagsExludeFilter list
      */
-    var parseDatesFromSavedQuery = function(savedQuery) {
-        
-        // Makes assumptions about the structure of the query.
-        // Must be kept in sync with buildQuery
-        var timestampQuery = (angular.isDefined(savedQuery.query["$and"])) 
-                                            ? savedQuery.query["$and"][0]["timestamp"]
-                                            : savedQuery.query["timestamp"];
-
-        logger.info("TranQueryController.parseDatesFromSavedQuery: timestampQuery=" + JSON.stringify(timestampQuery));
-
-        if ( angular.isUndefined( timestampQuery ) ) {
-            $scope.startDate = null;
-            $scope.endDate = null;
-            return;
-        }
-
-        if ( angular.isDefined( timestampQuery["$gte"] ) ) {
-            $scope.startDate = new Date( timestampQuery["$gte"] * 1000);
-        } else {
-            $scope.startDate = null;
-        }
-
-        if ( angular.isDefined( timestampQuery["$lte"] ) ) {
-            $scope.endDate = new Date( timestampQuery["$lte"] * 1000);
-        } else {
-            $scope.endDate = null;
-        }
-    };
-
-    /**
-     * Parse the tags from the saved query and set them into the $scope
-     * which updates the view.
-     *
-     * @sideeffect sets $scope.tagsFilter
-     */
-    var parseTagsFromSavedQuery = function(savedQuery) {
-        
-        var tagsQuery = (angular.isDefined(savedQuery.query["$and"])) 
-                                            ? savedQuery.query["$and"][1]["$or"]
-                                            : savedQuery.query["$or"];
-
-
-        if ( angular.isUndefined( tagsQuery ) ) {
-            $scope.tagsFilter = [];
-            return;
-        }
-        
-        $scope.tagsFilter = _.pluck( tagsQuery, "tags" );
-        logger.info("TranQueryController.parseTagsFromSavedQuery: tagsQuery=" + JSON.stringify(tagsQuery)
-                                                            + ", $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter) );
+    var removeTagExclude = function(tag) {
+        $scope.tagsExcludeFilter = _.filter( $scope.tagsExcludeFilter, function(t) { return t != tag; } );
+        logger.info("TranQueryController.removeTagExclude: " + tag + ", $scope.tagsExcludeFilter=" + JSON.stringify($scope.tagsExcludeFilter) );
     };
 
     /**
      * Event hanlder for "$loadSavedQuery" event.
      *
      * @sideeffect update $scope.postData and reload trans.
-     * @sideeffect form fields (tags, startDate, endDate) are set
      *
      */
     var onLoadSavedQuery = function(theEvent, savedQuery) {
@@ -1283,8 +1159,21 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         resetTranList();
         $scope.postData.query = savedQuery.query;
 
-        parseDatesFromSavedQuery( savedQuery );
-        parseTagsFromSavedQuery( savedQuery );
+        // Reset all form data before parsing the query.
+        $scope.startDate = null;
+        $scope.endDate = null;
+        $scope.tagsFilter = [];
+        $scope.tagsExcludeFilter = [];
+        $scope.inputMerchant = "";
+
+        // parse the query and fill in the form with the query parms
+        $scope = _.extend( $scope, TranQueryBuilder.parseQuery( savedQuery.query ) );
+
+        logger.info("TranQueryController.onLoadSavedQuery: after parse: " 
+                            + "$scope.startDate=" + $scope.startDate
+                            + ", $scope.endDate=" + $scope.endDate
+                            + ", $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter)
+                            + ", $scope.tagsExcludeFilter=" + JSON.stringify($scope.tagsExcludeFilter) );
 
         reloadTrans();
     };
@@ -1310,6 +1199,10 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     $scope.addTag = addTag;
     $scope.removeTag = removeTag;
     $scope.tagsFilter = [];
+
+    $scope.addTagExclude = addTagExclude;
+    $scope.removeTagExclude = removeTagExclude;
+    $scope.tagsExcludeFilter = [];
 
     $scope.startDate = null;
     $scope.endDate = null;
@@ -1354,12 +1247,410 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
 
 /**
+ * For building and parsing tran queries.
+ */
+.factory( "TranQueryBuilder", [ "Logger", "_", "MiscUtils", "Datastore", 
+                        function(Logger,   _,   MiscUtils,   Datastore ) {
+
+    var logger = Logger.getLogger("TranQueryBuilder" , { all: true });
+
+    /**
+     * Build a query object based on all form data.
+     * 
+     * @param $scope contains query data:
+     *          startDate,
+     *          endDate,
+     *          tagsFilter,
+     *          tagsExcludeFilter
+     *
+     * @return the query object, always of the form:
+     *         { $and: [ {date-query}, {tags-query} ] }
+     *         date-query or tags-query may be empty objects (which is fine)
+     */
+    var buildQuery = function( $scope ) {
+
+        logger.fine("buildQuery: parms=" + JSON.stringify( _.pick($scope, "startDate", "endDate", "tagsFilter", "tagsExcludeFilter", "inputMerchant" ) ) );
+
+        var dateQuery = buildDateQuery( $scope.startDate, $scope.endDate );
+        var tagsQuery = buildTagsQuery( $scope.tagsFilter, $scope.tagsExcludeFilter );  
+        var merchantQuery = buildMerchantQuery( $scope.inputMerchant );
+
+        var retMe = { "$and": [ dateQuery, tagsQuery, merchantQuery ] };
+
+        logger.fine("buildQuery: retMe=" + JSON.stringify(retMe) );
+
+        return retMe;
+    };
+
+    /**
+     *
+     * @return a query clause of the form:
+     *         { "merchant": { "$regex": ".*amazon.*", "$options": "i" } }
+     *         or {}
+     */
+    var buildMerchantQuery = function( inputMerchant ) {
+        logger.fine("buildMerchantQuery: inputMerchant=" + inputMerchant  );
+
+        if (MiscUtils.isEmpty(inputMerchant)) {
+            return {};
+        }
+
+        var retMe = {   "merchant": { 
+                          "$regex": ".*" + inputMerchant + ".*",
+                          "$options": "i" 
+                        }
+                    };
+        logger.fine("buildMerchantQuery: retMe=" + JSON.stringify(retMe));
+        return retMe;
+    }
+
+    /**
+     *
+     * @return { "inputMerchant": "..." }
+     *         or {}
+     */
+    var parseMerchantQuery = function(merchantQuery) {
+        logger.fine("parseMerchantQuery: merchantQuery=" + JSON.stringify(merchantQuery) );
+
+        if (MiscUtils.isNothing(merchantQuery) || MiscUtils.isNothing(merchantQuery.merchant) ) {
+            return {};
+        }
+
+        var regex = merchantQuery.merchant["$regex"];
+        var retMe = { "inputMerchant": regex.substring(2, regex.length - 2) };
+        logger.fine("parseMerchantQuery: retMe=" + JSON.stringify(retMe));
+        return retMe;
+    };
+
+    /**
+     *
+     * @return a query clause of the form:
+     *         { "timestamp": { "$gte": startDate-timestamp, "$lte": endDate-timestamp } }.
+     *         If either startDate or endDate are null they're omitted.
+     */
+    var buildDateQuery = function(startDate, endDate) {
+
+        logger.fine("buildDateQuery: startDate=" + startDate + ", endDate=" + endDate);
+
+        var query = {};
+
+        if (startDate != null) {
+            query.timestamp = query.timestamp || {};
+            query.timestamp["$gte"] = startDate.getTime() / 1000;
+        }
+
+        if (endDate != null) {
+            query.timestamp = query.timestamp || {};
+            query.timestamp["$lte"] = endDate.getTime() / 1000;
+        }
+
+        logger.fine("buildDateQuery: retMe=" + JSON.stringify(query) );
+
+        return query;
+    };
+
+    /**
+     *
+     * @return query phrase of the form     
+     *         { $or: [ { tags: "dining" }, {tags: "socializing"} ] }
+     */
+    var buildTagsInclusionQuery = function(tagsFilter) {
+
+        logger.fine("buildTagsInclusionQuery: tagsFilter=" + JSON.stringify(tagsFilter)  );
+
+        if ( MiscUtils.isNothing(tagsFilter) || tagsFilter.length == 0 ) {
+            return {};
+        }
+
+        // end up with something like:
+        // { $or: [ { tags: "dining" }, {tags: "socializing"} ] }
+        var tagsInclusionQuery = { "$or": _.map( tagsFilter, function(tag) { return { "tags": tag }; } ) } ;
+
+        logger.fine("buildTagsInclusionQuery: retMe=" + JSON.stringify(tagsInclusionQuery)  );
+
+        return tagsInclusionQuery;
+    };
+
+    /**
+     *
+     * @return query phrase of the form     
+     *         { $and: [ { tags: { "$ne": "dining" } }, {tags: { "$ne": "socializing" } } ] }
+     */
+    var buildTagsExclusionQuery = function(tags) {
+
+        logger.fine("buildTagsExclusionQuery: tags=" + JSON.stringify(tags)  );
+
+        if ( MiscUtils.isNothing(tags) || tags.length == 0 ) {
+            return {};
+        }
+
+        // end up with something like:
+        // { $and: [ { tags: { "$ne": "dining" } }, {tags: { "$ne": "socializing" } } ] }
+        var tagsExclusionQuery = { "$and": _.map( tags, function(tag) { return { "tags": { "$ne": tag } }; } ) } ;
+
+        logger.fine("buildTagsExclusionQuery: retMe=" + JSON.stringify(tagsExclusionQuery)  );
+
+        return tagsExclusionQuery;
+    };
+
+    /**
+     *
+     * @return a query object for the given tags.
+     *         always of the form: { $and: [ {tag-inclusion}, {tag-exclusion} ] }
+     *         tag-inclusion or tag-exclusion may be empty objects, which is fine.
+     */
+    var buildTagsQuery = function( tagsFilter, tagsExcludeFilter ) {   
+
+        logger.fine("buildTagsQuery: entry");
+
+        var retMe = { "$and": [ buildTagsInclusionQuery( tagsFilter ), 
+                                buildTagsExclusionQuery( tagsExcludeFilter ) ] };
+
+        logger.fine("buildTagsQuery: retMe=" + JSON.stringify(retMe) );
+
+        return retMe;
+    };
+
+    /**
+     * Parse the timestamp query
+     *
+     * { "timestamp": { "$gte": startDate-timestamp, "$lte": endDate-timestamp } }
+     *
+     * @return { startDate: Date(), endDate: Date() }
+     *         or {}
+     */
+    var parseTimestampQuery = function(timestampQuery) {
+
+        logger.fine("parseTimestampQuery: timestampQuery=" + JSON.stringify(timestampQuery));
+
+        if ( MiscUtils.isNothing( timestampQuery ) ) {
+            return {};
+        }
+
+        var retMe = {};
+        retMe.startDate = ( angular.isDefined( timestampQuery["$gte"] ) ) 
+                                        ? new Date( timestampQuery["$gte"] * 1000)
+                                        : null;
+
+        retMe.endDate = ( angular.isDefined( timestampQuery["$lte"] ) ) 
+                                        ? new Date( timestampQuery["$lte"] * 1000)
+                                        : null;
+
+        logger.fine("parseTimestampQuery: retMe=" + JSON.stringify(retMe));
+        return retMe;
+    };
+
+    /**
+     * 
+     * Parse the date query (built via buildDateQuery)
+     *
+     * {date-query}:
+     *      {}
+     *      { "timestamp": { "$gte": startDate-timestamp } }
+     *      { "timestamp": { "$gte": startDate-timestamp, "$lte": endDate-timestamp } }
+     *
+     * @return { startDate: Date(), endDate: Date() } 
+     *         or {}
+     */
+    var parseDateQuery = function(dateQuery) {
+
+        logger.fine("parseDateQuery: dateQuery=" + JSON.stringify(dateQuery));
+
+        if (MiscUtils.isNothing( dateQuery ) ) {
+            return {};
+        }
+
+        var retMe = parseTimestampQuery( dateQuery["timestamp"] );
+        logger.fine("parseDateQuery: retMe=" + JSON.stringify(retMe));
+        return retMe;
+    };
+
+    /**
+     * Parse the tags inclusion query:
+     *
+     * {tags-query}:
+     *      { $and: [ {tag-inclusion}, {tag-exclusion} ] }
+     *
+     * {tag-inclusion}:
+     *      { $or: [ { "tags": "dining" }, { "tags": "socializing" } ] }
+     *
+     * @return list of tags from the inclusion query
+     */
+    var parseTagsInclusionQuery = function(tagsInclusionQuery) {
+
+        logger.fine("parseTagsInclusionQuery: tagsInclusionQuery=" + JSON.stringify(tagsInclusionQuery) );
+
+        if ( MiscUtils.isNothing( tagsInclusionQuery ) || MiscUtils.isNothing(tagsInclusionQuery["$or"]) ) {
+            return;
+        }
+
+        var retMe = _.pluck( tagsInclusionQuery["$or"], "tags" );
+        logger.fine("parseTagsInclusionQuery: retMe=" + JSON.stringify(retMe) );
+        return retMe;
+    };
+
+    /**
+     * Parse the tags exclusion query:
+     *
+     * {tags-query}:
+     *      { $and: [ {tag-inclusion}, {tag-exclusion} ] }
+     *
+     * {tag-exclusion}:
+     *      { $and: [ { "tags": { "$ne": "dining" } } ] }
+     *
+     * @return list of tags from the exclusion query
+     */
+    var parseTagsExclusionQuery = function(tagsExclusionQuery) {
+
+        logger.fine("parseTagsExclusionQuery: tagsExclusionQuery=" + JSON.stringify(tagsExclusionQuery) );
+
+        if ( MiscUtils.isNothing( tagsExclusionQuery ) || MiscUtils.isNothing(tagsExclusionQuery["$and"]) ) {
+            return;
+        }
+
+        var retMe = _.pluck( _.pluck( tagsExclusionQuery["$and"], "tags" ), "$ne" );
+        logger.fine("parseTagsExclusionQuery: retMe=" + JSON.stringify(retMe) );
+        return retMe;
+    };
+
+    /**
+     * 
+     * Parse the tags query (built via buildTagsQuery)
+     *
+     * {tags-query}:
+     *      { $and: [ {tag-inclusion}, {tag-exclusion} ] }
+     *
+     * {tag-inclusion}:
+     *      { $or: [ { "tags": "dining" }, { "tags": "socializing" } ] }
+     *
+     * {tag-exclusion}:
+     *      { $and: [ { "tags": { "$ne": "dining" } } ] }
+     *
+     *
+     * @return { tagsFilter: [], tagsExcludeFilter: [] }
+     *         or {}
+     */
+    var parseTagsQuery = function(tagsQuery) {
+
+        logger.fine("parseTagsQuery: tagsQuery=" + JSON.stringify(tagsQuery));
+
+        if ( MiscUtils.isNothing( tagsQuery ) || MiscUtils.isNothing(tagsQuery["$and"]) ) {
+            return {};
+        }
+
+        var tagsInclusionQuery = tagsQuery["$and"][0];
+        var tagsExclusionQuery = tagsQuery["$and"][1];
+
+        var retMe = {};
+        retMe.tagsFilter = parseTagsInclusionQuery( tagsInclusionQuery );
+        retMe.tagsExcludeFilter = parseTagsExclusionQuery( tagsExclusionQuery );
+
+        logger.fine("parseTagsQuery: retMe=" + JSON.stringify(retMe));
+        return retMe;
+    };
+
+    /**
+     *
+     * Parse the query and fill in the form with the query parms
+     *
+     * All saved queries are of the form:
+     *      { $and: [ {date-query}, {tags-query}, {merchant-query} ] }
+     *
+     * @return { 
+     *              startDate: Date(), 
+     *              endDate: Date(),
+     *              tagsFilter: [], 
+     *              tagsExcludeFilter: [] ,
+     *              inputMerchant: "xx"
+     *         }
+     *         or {}
+     *
+     */
+    var parseQuery = function(query) {
+
+        logger.fine("parseQuery: query=" + JSON.stringify(query));
+
+        if ( MiscUtils.isNothing( query ) || MiscUtils.isNothing(query["$and"]) ) {
+            return {};
+        }
+
+        var dateQuery = query["$and"][0];
+        var tagsQuery = query["$and"][1] || null;
+        var merchantQuery = query["$and"][2] || null;
+
+        var retMe = _.extend( {}, 
+                              parseDateQuery( dateQuery ), 
+                              parseTagsQuery( tagsQuery ),
+                              parseMerchantQuery( merchantQuery ) );
+
+        logger.fine("parseQuery: retMe=" + JSON.stringify(retMe));
+        return retMe;
+    };
+
+    /**
+     * @return an options object to apply to a query that fetches
+     *         all the remaining trans.
+     */
+    var buildOptionsForAllRemainingTrans = function( page, pageSize ) {
+        return { "sort": { "timestamp": -1 },
+                 "skip": page * pageSize,
+                 "fields": Datastore.getTranFieldProjection()
+               } ;
+    };
+
+    /**
+     * @return an options object to apply to a query that fetches
+     *         the next page of trans
+     */
+    var buildOptionsForNextPageOfTrans = function( page, pageSize ) {
+        return { "sort": { "timestamp": -1 },
+                 "limit": pageSize,
+                 "skip": page * pageSize,
+                 "fields": Datastore.getTranFieldProjection()
+               } ;
+    };
+
+    /**
+     * @return an options object to apply to a query that fetches
+     *         all trans but only certain fails.
+     */
+    var buildOptionsForAmountsAndTags = function() {
+        return { "sort": { "timestamp": -1 },
+                 "fields": { "amountValue": 1,
+                             "timestamp": 1,
+                             "tags": 1
+                           }
+               } ;
+    };
+
+    /**
+     * @return query data for the given account
+     */
+    var buildQueryForAccount = function( account ) {
+        logger.fine("buildQueryForAccount: account=" + JSON.stringify( _.pick( account, "accountName", "fiName") ));
+        return {   "account": account.accountName,
+                   "fi": account.fiName };
+    };
+
+    return {
+        buildQuery: buildQuery,
+        parseQuery: parseQuery,
+        buildOptionsForAmountsAndTags,
+        buildOptionsForNextPageOfTrans,
+        buildOptionsForAllRemainingTrans,
+        buildQueryForAccount: buildQueryForAccount
+    };
+
+}])
+
+
+/**
  * Mongo datastore.
  */
 .factory("Datastore", [ "$http", "Logger",
                function( $http,   Logger ) {
 
-    var logger = Logger.getLogger("Datastore" /* , { info: true, fine: true } */);
+    var logger = Logger.getLogger("Datastore", { all: false });
 
     /**
      * Fetch the list of tags from the db.
@@ -1516,17 +1807,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         return fetchTrans( postData );
     };
 
-
-    // -rx- /**
-    // -rx-  * We pretty much never want to get pending trans that have been resolved
-    // -rx-  * to cleared trans.  (mint actually deletes pending trans once they've been cleared).
-    // -rx-  */
-    // -rx- var setIsResolved = function(postData) {
-    // -rx-     postData.query = postData.query || {};
-    // -rx-     postData.query.isResolved = { "$exists": false } ;
-    // -rx-     return postData;
-    // -rx- };
-
     /**
      * @return the typical tran fields to fetch.
      */
@@ -1551,7 +1831,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchTrans = function( postData ) {
-        // -rx- postData = setIsResolved(postData);
         logger.info("Datastore.fetchTrans: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions", postData )
                     .then( function success(response) {
@@ -1571,7 +1850,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise fullfilled with the count
      */
     var fetchTransCount = function( postData ) {
-        // -rx- postData = setIsResolved(postData);
         logger.info("Datastore.fetchTransCount: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions/count", postData )
                     .then( function success(response) {
@@ -1590,7 +1868,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise fullfilled with the summary
      */
     var fetchTransSummary = function( postData ) {
-        // -rx- postData = setIsResolved(postData);
         logger.info("Datastore.fetchTransSummary: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions/summary", postData )
                     .then( function success(response) {
@@ -1719,11 +1996,19 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         return angular.isDefined(x);
     };
 
+    /**
+     * @return true if the given x is undefined or null.
+     */
+    var isNothing = function(x) {
+        return angular.isUndefined(x) || x == null;
+    };
+
     return {
         currencyToNumber: currencyToNumber,
         sumField: sumField,
         isEmpty: isEmpty,
-        isDefined: isDefined
+        isDefined: isDefined,
+        isNothing: isNothing
     };
 }])
 
@@ -1825,7 +2110,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .factory( "DateUtils", [ "Logger", "dateFilter",
                  function(Logger,   dateFilter ) {
 
-    var logger = Logger.getLogger( "DateUtils", { info: false, fine: false} );
+    var logger = Logger.getLogger( "DateUtils", { all: false } );
 
     /**
      * @param timestamp
