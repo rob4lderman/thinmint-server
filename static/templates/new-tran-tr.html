@@ -10,7 +10,7 @@
     <td class="text-right" tm-is-debit="{{tran.isDebit}}" tm-is-transfer="{{tran.isTransfer}}" ng-bind="tran.amount"></td>
     <td class="tran-ispending">{{ (tran.isPending) ? "(pend)" : "" }}</td>
     <!-- td ng-bind="tran.merchant"></td -->
-    <td><span data-toggle="tooltip" title="{{tran.omerchant}}">{{ tran.merchant }}<span><span class="tm-resolved-pending-tran" ng-if="MiscUtils.isDefined(tran.pendingTran)">({{tran.pendingTran.amount}} on {{tran.pendingTran.date}})</span></td>
+    <td><span data-toggle="tooltip" title="{{tran._id}}: {{tran.omerchant}}">{{ tran.merchant }}</span><span class="tm-resolved-pending-tran" ng-if="MiscUtils.isDefined(tran.pendingTran)">({{tran.pendingTran.amount}} on {{tran.pendingTran.date}})</span></td>
     <td>{{tran.account}}</td>
     <td class="tm-tag-list" ng-controller="TagFormController">
         <span ng-repeat="tag in tran.tags" class="span-tag">

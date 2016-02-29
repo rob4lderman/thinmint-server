@@ -1647,8 +1647,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 /**
  * Mongo datastore.
  */
-.factory("Datastore", [ "$http", "Logger",
-               function( $http,   Logger ) {
+.factory("Datastore", [ "$http", "Logger", "_",
+               function( $http,   Logger,   _ ) {
 
     var logger = Logger.getLogger("Datastore", { all: false });
 
@@ -1658,7 +1658,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise, fulfilled with tags list
      */
     var fetchTags = function() {
-        logger.info("Datastore.fetchTags: ");
+        logger.info("fetchTags: ");
         return $http.get( "/tags" )
                     .then( function success(response) {
                                // response.data – {string|Object} – The response body transformed with the transform functions.
@@ -1666,10 +1666,10 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                // response.headers – {function([headerName])} – Header getter function.
                                // resposne.config – {Object} – The configuration object that was used to generate the request.
                                // response.statusText – {string} – HTTP status text of the response.
-                               logger.fine( "Datastore.fetchTags: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "fetchTags: response=" + JSON.stringify(response,null,2));
                                return response.data ;
                            }, function error(response) {
-                               logger.severe("Datastore.fetchTags: GET /tags: response=" + JSON.stringify(response)); 
+                               logger.severe("fetchTags: GET /tags: response=" + JSON.stringify(response)); 
                            } );
     };
 
@@ -1679,7 +1679,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise, fulfilled by the account record.
      */
     var fetchAccount = function( accountId ) {
-        logger.info("Datastore.fetchAccount: accountId=" + accountId);
+        logger.info("fetchAccount: accountId=" + accountId);
 
         // Promises:
         // $http.get returns a Promise.
@@ -1691,11 +1691,11 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         // The value returned from the success callback becomes the "fulfillment value" for the chained Promise.
         return $http.get( "/accounts/" + accountId)
                     .then( function success(response) {
-                               logger.fine( "Datastore.fetchAccount: /accounts/" + accountId + ": response=" + JSON.stringify(response));
+                               logger.fine( "fetchAccount: /accounts/" + accountId + ": response=" + JSON.stringify(response));
                                return response.data;
                            }, 
                            function error(response) {
-                               logger.severe("Datastore.fetchAccount: GET /account/" + accountId + ": response=" + JSON.stringify(response)); 
+                               logger.severe("fetchAccount: GET /account/" + accountId + ": response=" + JSON.stringify(response)); 
                            });
     };
 
@@ -1703,14 +1703,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise, fulfilled by the accountTimeSeries records.
      */
     var fetchAccountTimeSeries = function( accountId ) {
-        logger.info("Datastore.fetchAccountTimeSeries: accountId=" + accountId);
+        logger.info("fetchAccountTimeSeries: accountId=" + accountId);
         return $http.get( "/accounts/" + accountId + "/timeseries")
                     .then( function success(response) {
-                               logger.fine( "Datastore.fetchAccountTimeSeries: /accounts/" + accountId + "/timeseries: response=" + JSON.stringify(response));
+                               logger.fine( "fetchAccountTimeSeries: /accounts/" + accountId + "/timeseries: response=" + JSON.stringify(response));
                                return response.data;
                            }, 
                            function error(response) {
-                               logger.severe("Datastore.fetchAccountTimeSeries: GET /account/" + accountId + "/timeseries: response=" + JSON.stringify(response)); 
+                               logger.severe("fetchAccountTimeSeries: GET /account/" + accountId + "/timeseries: response=" + JSON.stringify(response)); 
                            });
     };
 
@@ -1718,20 +1718,19 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise, fulfilled by the account's tran records.
      */
     var fetchAccountTrans = function( accountId ) {
-        logger.info("Datastore.fetchAccountTrans: accountId=" + accountId);
+        logger.info("fetchAccountTrans: accountId=" + accountId);
         return $http.get( "/accounts/" + accountId + "/transactions")
                     .then( function success(response) {
-                               logger.info( "Datastore.fetchAccountTrans: /accounts/" + accountId + "/transactions: length=" + response.data.length );
-                               logger.fine( "Datastore.fetchAccountTrans: /accounts/" + accountId + "/transactions: response=" + JSON.stringify(response));
+                               logger.info( "fetchAccountTrans: /accounts/" + accountId + "/transactions: length=" + response.data.length );
+                               logger.fine( "fetchAccountTrans: /accounts/" + accountId + "/transactions: response=" + JSON.stringify(response));
                                return response.data;
                            }, 
                            function error(response) {
-                               logger.severe("Datastore.fetchAccountTrans: GET /account/" + accountId + "/transactions: response=" + JSON.stringify(response)); 
+                               logger.severe("fetchAccountTrans: GET /account/" + accountId + "/transactions: response=" + JSON.stringify(response)); 
                            });
     };
 
     /**
-     * TODO: use this.
      * @return the typical account fields to fetch
      */
     var getAccountFieldProjection = function() {
@@ -1757,13 +1756,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchAccounts = function() {
-        logger.info("Datastore.fetchAccounts:");
+        logger.info("fetchAccounts:");
         return $http.get( "/accounts" )
                     .then( function success(response) {
-                               logger.fine( "Datastore.fetchAccounts: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "fetchAccounts: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               logger.severe("Datastore.fetchAccounts: GET /accounts: response=" + JSON.stringify(response)); 
+                               logger.severe("fetchAccounts: GET /accounts: response=" + JSON.stringify(response)); 
                            } );
     };
 
@@ -1773,19 +1772,21 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchActiveAccounts = function() {
-        logger.info("Datastore.fetchActiveAccounts:");
-        var postData = { "query": { "isActive": true },
-                         "options": { "sort": { "fiName": 1 },
+        logger.info("fetchActiveAccounts:");
+        var postData = { "query": { "isActive": true,
+                                    "mintMarker": 1 
+                                  },
+                         "options": { "sort": { "fiName": 1, "accountName": 1 },
                                       "fields": getAccountFieldProjection() 
                                     } 
                        };
 
         return $http.post( "/query/accounts", postData )
                     .then( function success(response) {
-                               logger.fine( "Datastore.fetchActiveAccounts: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "fetchActiveAccounts: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               logger.severe("Datastore.fetchActiveAccounts: POST /query/accounts: response=" + JSON.stringify(response)); 
+                               logger.severe("fetchActiveAccounts: POST /query/accounts: response=" + JSON.stringify(response)); 
                            } );
     };
     
@@ -1795,7 +1796,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchNewTrans = function() {
-        logger.info("Datastore.fetchNewTrans:");
+        logger.info("fetchNewTrans:");
         var postData = { "query": { "$or": [ { "hasBeenAcked": { "$exists": false } }, 
                                              { "hasBeenAcked" : false } 
                                            ] 
@@ -1831,14 +1832,15 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchTrans = function( postData ) {
-        logger.info("Datastore.fetchTrans: postData=" + JSON.stringify(postData) );
+        postData.query = _.extend( { "mintMarker": 1 }, postData.query );
+        logger.info("fetchTrans: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions", postData )
                     .then( function success(response) {
-                               logger.info( "Datastore.fetchTrans: response.length=" + response.data.length);
-                               logger.fine( "Datastore.fetchTrans: response=" + JSON.stringify(response,null,2));
+                               logger.info( "fetchTrans: response.length=" + response.data.length);
+                               logger.fine( "fetchTrans: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               logger.severe("Datastore.fetchTrans: POST /query/transactions"
+                               logger.severe("fetchTrans: POST /query/transactions"
                                                                     + ", postData=" + JSON.stringify(postData) 
                                                                     + ", response=" + JSON.stringify(response));
                            } );
@@ -1850,13 +1852,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise fullfilled with the count
      */
     var fetchTransCount = function( postData ) {
-        logger.info("Datastore.fetchTransCount: postData=" + JSON.stringify(postData) );
+        postData.query = _.extend( { "mintMarker": 1 }, postData.query );
+        logger.info("fetchTransCount: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions/count", postData )
                     .then( function success(response) {
-                               logger.fine( "Datastore.fetchTrans: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "fetchTrans: response=" + JSON.stringify(response,null,2));
                                return response.data[0];
                            }, function error(response) {
-                               logger.severe("Datastore.fetchTrans: POST /query/transactions/count"
+                               logger.severe("fetchTrans: POST /query/transactions/count"
                                                                     + ", postData=" + JSON.stringify(postData) 
                                                                     + ", response=" + JSON.stringify(response));
                            } );
@@ -1868,13 +1871,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise fullfilled with the summary
      */
     var fetchTransSummary = function( postData ) {
-        logger.info("Datastore.fetchTransSummary: postData=" + JSON.stringify(postData) );
+        postData.query = _.extend( { "mintMarker": 1 }, postData.query );
+        logger.info("fetchTransSummary: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions/summary", postData )
                     .then( function success(response) {
-                               logger.fine( "Datastore.fetchTransSummary: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "fetchTransSummary: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               logger.severe("Datastore.fetchTranSummary: POST /query/transactions/summary"
+                               logger.severe("fetchTranSummary: POST /query/transactions/summary"
                                                                     + ", postData=" + JSON.stringify(postData) 
                                                                     + ", response=" + JSON.stringify(response));
                            } );
@@ -1905,14 +1909,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise
      */
     var fetchSavedQueries = function() {
-        logger.info("Datastore.fetchSavedQueries: ");
+        logger.info("fetchSavedQueries: ");
 
         return $http.get( "/savedqueries" )
                     .then( function success(response) {
-                               logger.fine( "Datastore.fetchSavedQueries: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "fetchSavedQueries: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               logger.severe("Datastore.fetchSavedQueries: GET /savedqueries: response=" + JSON.stringify(response)); 
+                               logger.severe("fetchSavedQueries: GET /savedqueries: response=" + JSON.stringify(response)); 
                            } );
     };
 
