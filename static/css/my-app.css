@@ -227,16 +227,16 @@ tr.tm-account-list-total tr.tm-list-totals {
 }
 
 span.span-tag {
-    background-color: #9b9;
-    color: white;
-    padding: 2px 4px;
-    margin: 2px;
+    background-color: yellow;
+    color: #090;
+    padding: 1px 4px;
     border-radius: 4px;
-    /* white-space: nowrap; */
+    border: solid 1px #ccc;
 }
 
 .span-tag .span-tag-x {
-    color: #44b;
+    color: #00b;
+    padding-left: 5px;
 }
 
 .span-tag .span-tag-x:hover {

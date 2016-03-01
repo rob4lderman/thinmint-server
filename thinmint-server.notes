@@ -1,6 +1,6 @@
 
 
-TODO: tran query page (filter by account, by tag, by merchant?, by date range, by amount range?)
+done: tran query page (filter by account, by tag, by merchant?, by date range, by amount range?)
       tags: clothes + ilana - gift  ==>  tags.contains(clothes) and tags.contains(ilana) and !tags.contains(gift)
       tags: clothes and ilana or not gift  ==>  tags.contains(clothes) and tags.contains(ilana) and !tags.contains(gift)
       merchant: like "amazon" 
@@ -9,10 +9,11 @@ TODO: tran query page (filter by account, by tag, by merchant?, by date range, b
 
 TODO: more javascript charts!!!   what else?
 
-TODO: EXclude tags from query
     
 TODO: don't create a new accountsTimeSeries record if the balance hasn't changed since the last one...
       or... remove the last one and insert a new one with the current day?
+      no.  because when the balance changes, it'll look like a gradual change between the last
+      accountTimeSeries record and this one?  actually... no that's not correct either.
 
 
 done: match up pending trans with completed trans  

@@ -13,9 +13,8 @@
     <td><span data-toggle="tooltip" title="{{tran._id}}: {{tran.omerchant}}">{{ tran.merchant }}</span><span class="tm-resolved-pending-tran" ng-if="MiscUtils.isDefined(tran.pendingTran)">({{tran.pendingTran.amount}} on {{tran.pendingTran.date}})</span></td>
     <td>{{tran.account}}</td>
     <td class="tm-tag-list" ng-controller="TagFormController">
-        <span ng-repeat="tag in tran.tags" class="span-tag">
-            {{tag}}
-            <a class="span-tag-x" href="" ng-click="removeTag(tag)">x</a>
+        <span ng-repeat="tag in tran.tags">
+            <span class="span-tag">{{tag}}<a class="span-tag-x" href="" ng-click="removeTag(tag)">x</a></span>
         </span>
         <form class="form-tag" ng-submit="onFormSubmit()" >
             <input type="text" 
