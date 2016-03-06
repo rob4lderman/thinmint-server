@@ -1145,7 +1145,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "TranListController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "MiscUtils", "ChartUtils", "TranQueryBuilder", "$rootScope", "$timeout",
                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   MiscUtils,   ChartUtils,   TranQueryBuilder,   $rootScope,   $timeout) {
 
-    var logger = Logger.getLogger("TranListController", { all: true } );
+    var logger = Logger.getLogger("TranListController", { all: false } );
     logger.info("alive!");
 
     /**
@@ -1328,7 +1328,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "TranPageController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "MiscUtils", "ChartUtils", "TranQueryBuilder", "$rootScope", "$timeout",
                             function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   MiscUtils,   ChartUtils,   TranQueryBuilder,   $rootScope,   $timeout) {
 
-    var logger = Logger.getLogger("TranPageController", { all: true } );
+    var logger = Logger.getLogger("TranPageController", { all: false } );
     logger.info("alive!");
 
     /**
@@ -1391,7 +1391,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "TranQueryController", ["$scope", "_", "$location", "Logger",  "MiscUtils", "TranQueryBuilder", "$rootScope", "$timeout",
                             function( $scope,   _ ,  $location,   Logger,    MiscUtils,   TranQueryBuilder,   $rootScope,   $timeout) {
 
-    var logger = Logger.getLogger("TranQueryController", { all: true } );
+    var logger = Logger.getLogger("TranQueryController", { all: false } );
     logger.info("alive!");
 
     /**
@@ -1543,7 +1543,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .factory( "TranQueryBuilder", [ "Logger", "_", "MiscUtils", "Datastore", 
                         function(Logger,   _,   MiscUtils,   Datastore ) {
 
-    var logger = Logger.getLogger("TranQueryBuilder" , { all: true });
+    var logger = Logger.getLogger("TranQueryBuilder" , { all: false });
 
     /**
      * Build a query object based on all form data.
