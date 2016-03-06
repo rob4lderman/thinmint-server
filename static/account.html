@@ -51,10 +51,10 @@
         </div>
     </div>
 
-    <div class="container" ng-controller="AccountController">
+    <div class="container" ng-controller="AccountPageController">
 
         <!-- account summary -->
-        <div class="tm-portal tm-account-summary">
+        <div class="tm-portal tm-account-summary" ng-controller="SingleAccountSummaryController">
             <h3>Account Summary</h3>
             <table class="table table-condensed table-hover tm-account-list">
                 <tr ng-include="'templates/account-th.html'"></tr>
@@ -66,7 +66,7 @@
         </div>
 
         <!-- account charts -->
-        <div class="tm-portal">
+        <div class="tm-portal" ng-controller="AccountTimeSeriesChartController">
             <h3>Time Series: Account Balance</h3>
             <div class="text-center">
                 <div class="tm-tran-canvas-thinking" > 
@@ -76,8 +76,8 @@
             </div>
         </div>
 
-        <div ng-controller="TranQueryController">
-            <div class="tm-portal">
+        <div>
+            <div class="tm-portal" ng-controller="TranChartController">
                 <h3>Chart: Transactions 
                     <small>(<a href="" ng-click="renderChartByTime(chartTrans)">by time</a>)</small> 
                     <small>(<a href="" ng-click="renderChartByTags(chartTrans)">by tags</a>)</small>
@@ -91,7 +91,7 @@
                 </div>
             </div>
 
-            <div class="tm-portal" >
+            <div class="tm-portal" ng-controller="TranListController" >
                 <h3>Transactions <small>[{{trans.length}} of {{transSummary.count}}]</small> <span class="tm-grand-total"><small>Total Amount:</small> <span tm-is-debit="{{transSummary.amountValue < 0}}">{{ transSummary.amountValue | currency }}</span></span> </h3>
                 <table class="table table-condensed table-hover tm-tran-table">
                     <tr ng-include="'templates/tran-th.html'"></tr>

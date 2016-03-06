@@ -2,6 +2,10 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
 /**
  * TODO: separate controllers for subsets of accounts? then the summation html could be ng-included.
+ *       http://stackoverflow.com/questions/13811948/different-ng-includes-on-the-same-page-how-to-send-different-variables-to-each
+ *
+ *       use ng-if trick:
+ *       http://stackoverflow.com/questions/25678560/angular-passing-scope-to-ng-include
  *
  */
 .controller( "AccountSummaryController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "MiscUtils",
@@ -22,26 +26,20 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                                      return account.accountType == "credit" || account.accountType == "bank";
                                                  } );
 
-        setAccountSums($scope.bankAndCreditAccountsSums, $scope.bankAndCreditAccounts);
+        $scope.bankAndCreditAccountsSums = MiscUtils.sumFields( $scope.bankAndCreditAccounts, 
+                                                                ["value", "last7days", "last30days", "last90days", "last365days" ]);
 
         $scope.investmentAccounts = _.filter( $scope.accounts, 
                                                  function(account) { 
                                                      return ! (account.accountType == "credit" || account.accountType == "bank");
                                                  } );
-        setAccountSums($scope.investmentAccountsSums, $scope.investmentAccounts);
+
+
+        $scope.investmentAccountsSums = MiscUtils.sumFields( $scope.investmentAccounts, 
+                                                             ["value", "last7days", "last30days", "last90days", "last365days" ]);
+
     };
 
-    /**
-     * Sums the account fiels ["value", "last7days", "last30days", "last90days", "last365days" ]
-     * and puts the sums in the given sums object, keyed by field name.
-     */
-    var setAccountSums = function( sums, accounts ) {
-        // Set sum totals.
-        _.each( ["value", "last7days", "last30days", "last90days", "last365days" ],
-                function(fieldName) {
-                    sums[fieldName] = sumField( accounts, fieldName );
-                } );
-    };
 
     /**
      * @return net worth (sum of value for all $scope.accounts)
@@ -87,6 +85,75 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
 }])
 
+
+/**
+ * TODO:
+ *
+ */
+.controller( "AccountListController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "MiscUtils", "$location",
+                                function( $scope,   _,   Logger,   DateUtils,   Datastore,   MiscUtils,   $location ) {
+
+    var logger = Logger.getLogger("AccountListController", { all: true });
+    logger.info("AccountListController: alive!");
+
+    /**
+     * Set $scope.accounts 
+     */
+    var setAccounts = function( accounts ) {
+        $scope.isThinking = false;
+        $scope.accounts = accounts;
+        $scope.accountsSums = MiscUtils.sumFields( $scope.accounts, 
+                                                   ["value", "last7days", "last30days", "last90days", "last365days" ]);
+    };
+
+    /**
+     * @return the accountId from the query string.
+     */
+    var parseAccountTypesFromLocation = function() {
+        var retMe = $location.search().accountTypes || "cash";
+        logger.fine("parseAccountTypesFromLocation: retMe=" + JSON.stringify(retMe));
+        return retMe;
+    };
+
+    /**
+     * TODO
+     */
+    var fetchAccounts = function() {
+
+        var postData = { "query": { "isActive": true },
+                         "options": { "sort": { "fiName": 1, "accountName": 1 },
+                                      "fields": Datastore.getAccountFieldProjection() 
+                                    } 
+                       };
+
+        $scope.accountTypes = parseAccountTypesFromLocation();
+
+        if ( $scope.accountTypes == "Cash" ) {
+            postData.query.accountType = { "$in": [ "bank", "credit" ] };
+
+        } else if ( $scope.accountTypes == "Investment" ) {
+            postData.query.accountType = { "$nin": [ "bank", "credit" ] };
+        }
+
+        Datastore.queryAccounts( postData ).then( setAccounts );
+    }
+
+    /**
+     * Export to $scope
+     */
+    $scope.accounts = [];
+    $scope.accountsSums = {};
+    $scope.DateUtils = DateUtils;
+    $scope.MiscUtils = MiscUtils;
+
+    $scope.isThinking = true;
+
+    /**
+     * Init data
+     */
+    fetchAccounts();
+
+}])
 
 /**
  * NewTransController
@@ -145,8 +212,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
              .then( function success(tags) { $scope.tags = tags; } ); 
 
 }])
-
-
 
 /**
  * ng-controller for tran tagging <form>(s).
@@ -365,32 +430,71 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     return directiveDefiningObj;
 }])
 
+/**
+ * Show summary table for just a single account.
+ */
+.controller( "SingleAccountSummaryController",   ["$scope", "Logger", "DateUtils", "Datastore", "MiscUtils",
+                                         function( $scope,   Logger,   DateUtils,   Datastore,   MiscUtils) {
+
+    var logger = Logger.getLogger("SingleAccountSummaryController", {all:true});
+    logger.info("alive!");
+
+    /**
+     * @param account set into scope
+     * @return account
+     */
+    var setAccount = function(account) { 
+        $scope.account = account; 
+        $scope.isThinking = false;
+        return account;
+    };
+
+    /**
+     * Fetch account data for the given accountid.
+     */
+    var onAccountIdSelected = function(theEvent, accountId) {
+        logger.fine("onAccountIdSelected: accountId=" + accountId);
+        $scope.isThinking = true;
+        Datastore.fetchAccount( accountId )
+                 .then( setAccount );
+    };
+
+    $scope.$on( "$tmAccountIdSelected", onAccountIdSelected ) ;
+
+    /**
+     * Export
+     */
+    $scope.isThinking = true;
+    $scope.DateUtils = DateUtils;
+    $scope.MiscUtils = MiscUtils;
+
+}])
+
 
 /**
- * Controller for account.html.
+ * For the account balance time series chart.
  */
-.controller( "AccountController",   ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "ChartUtils", "MiscUtils",
-                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   ChartUtils,   MiscUtils) {
+.controller( "AccountTimeSeriesChartController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "ChartUtils", 
+                                           function( $scope,   _ ,  Logger,   DateUtils,   Datastore,   ChartUtils ) {
 
-    var logger = Logger.getLogger("AccountController");
-
-    logger.info("AccountController: alive! $location.search=" + JSON.stringify($location.search()));
+    var logger = Logger.getLogger("AccountTimeSeriesChartController", {all:true});
+    logger.info("alive!");
 
     /**
      * Remember theChart so we can clear its data when the data is updated.
+     * TODO: chart rendering shoudl be done in directive? (since it access the DOM)
      */
     var chartCanvasElement = document.getElementById("valueChart");
     var theChart = null;
 
     /**
-     * TODO: chart rendering shoudl be done in directive? (since it access the DOM)
      * Render the current balance chart.
      */
     var renderChart = function( accountTimeSeries ) {
-        logger.info("AccountController.renderChart: ");
+        logger.fine("renderChart: entry");
 
         if (theChart != null) {
-            logger.info("AccountController.renderChart: clearing previous chart");
+            logger.fine("renderChart: clearing previous chart");
             theChart.destroy();
         }
 
@@ -435,9 +539,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         
         var sampleRate = Math.ceil( values.length / Math.min( accountTimeSeries.length, 100 )  );
 
-        logger.info("AccountController.renderChart: sampleRate=" + sampleRate 
-                                                    + ", values.length=" + values.length
-                                                    + ", accountTimeSeries.length=" + accountTimeSeries.length);
+        logger.fine("renderChart: sampleRate=" + sampleRate 
+                               + ", values.length=" + values.length
+                               + ", accountTimeSeries.length=" + accountTimeSeries.length);
 
         // Setup data frame.
         var data = {
@@ -462,13 +566,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
-     * @return the accountId from the query string.
-     */
-    var parseAccountIdFromLocation = function() {
-        return $location.search().accountId || 0;
-    }
-
-    /**
      * @param accountTimeSeries set into scope
      * @return accountTimeSeries
      */
@@ -479,32 +576,49 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
-     * @param account set into scope
-     * @return account
+     * Fetch timeseries data for the given accountId
      */
-    var setAccount = function(account) { 
-        $scope.account = account; 
-        $scope.isThinking = false;
-        return account;
-    };
-
-    /**
-     * Export to scope.
-     */
-    $scope.DateUtils = DateUtils;
-    $scope.MiscUtils = MiscUtils;
-    $scope.isChartThinking = true;
-    $scope.isThinking = true;
-
-    /**
-     * Go!
-     */
-    Datastore.fetchAccount( parseAccountIdFromLocation() )
-             .then( setAccount );
-
-    Datastore.fetchAccountTimeSeries( parseAccountIdFromLocation() )
+    var onAccountIdSelected = function(theEvent, accountId) {
+        logger.fine("onAccountIdSelected: accountId=" + accountId);
+        $scope.isChartThinking = true;
+        Datastore.fetchAccountTimeSeries( accountId )
              .then( setAccountTimeSeries ) 
              .then( renderChart );
+    };
+
+    $scope.$on( "$tmAccountIdSelected", onAccountIdSelected ) ;
+    $scope.isChartThinking = true;
+
+}])
+
+/**
+ * Controller for account.html.
+ */
+.controller( "AccountPageController", ["$scope", "$location", "Logger", "$timeout", "Datastore", 
+                              function( $scope,   $location,   Logger,   $timeout,   Datastore) {
+
+    var logger = Logger.getLogger("AccountPageController", {all:true});
+
+    logger.info("alive! $location.search=" + JSON.stringify($location.search()));
+
+    /**
+     * @return the accountId from the query string.
+     */
+    var parseAccountIdFromLocation = function() {
+        return $location.search().accountId || 0;
+    }
+
+    // Broadcast event for sub-controllers
+    // Need to queue it up via $timeout due to scope life-cycle issues.
+    // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
+    $timeout(function() {
+                 logger.fine("broadcast $tmAccountIdSelected accountId=" + parseAccountIdFromLocation() );
+                 $scope.$broadcast( "$tmAccountIdSelected", parseAccountIdFromLocation() );
+             }, 1);
+
+    // Populate tags for auto-fill.
+    Datastore.fetchTags()
+             .then( function success(tags) { $scope.tags = tags; } ); 
 
 }])
 
@@ -558,9 +672,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 .controller( "SaveQueryFormController", ["$scope", "_", "$location", "Logger", "$rootScope", "Datastore", "MiscUtils", 
                                 function( $scope,   _ ,  $location,   Logger,   $rootScope,   Datastore,   MiscUtils) {
 
-    var logger = Logger.getLogger("SaveQueryFormController");
-
-    logger.info("SaveQueryFormController: Alive!");
+    var logger = Logger.getLogger("SaveQueryFormController", {all:true});
+    logger.info("Alive!");
 
 
     /**
@@ -572,10 +685,10 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         var newSavedQuery = { name: $scope.inputSavedQueryName, 
                               query: $scope.postData.query };
         
-        logger.info("SaveQueryFormController.saveQuery: $scope.inputSavedQueryName=" + $scope.inputSavedQueryName
-                                                   + ", $scope.postData=" + JSON.stringify( $scope.postData ) 
-                                                   + ", $scope.selectedSavedQuery=" + JSON.stringify($scope.selectedSavedQuery),
-                                                   + ", newSavedQuery=" + JSON.stringify(newSavedQuery) );
+        logger.fine("saveQuery: $scope.inputSavedQueryName=" + $scope.inputSavedQueryName
+                             + ", $scope.postData=" + JSON.stringify( $scope.postData ) 
+                             + ", $scope.selectedSavedQuery=" + JSON.stringify($scope.selectedSavedQuery),
+                             + ", newSavedQuery=" + JSON.stringify(newSavedQuery) );
 
         Datastore.saveQuery( newSavedQuery )
                  .then( function() {  
@@ -589,7 +702,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                             $scope.savedQueries.push( newSavedQuery );
                             setSavedQueries( $scope.savedQueries );
 
-                            alert( "Current query saved as '" + newSavedQuery.name + "'");
+                            alert( "Current filter saved as '" + newSavedQuery.name + "'");
                         } );
     };
 
@@ -598,28 +711,48 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var setSavedQueries = function(savedQueries) {
         $scope.savedQueries = _.sortBy( savedQueries, "name" );
-        logger.info("SaveQueryFormController.setSavedQueries: " + JSON.stringify( $scope.savedQueries ) );
+        logger.fine("setSavedQueries: " + JSON.stringify( $scope.savedQueries ) );
     };
 
     /**
-     * Broadcast $loadSavedQuery event, which will be heard by the
+     * Broadcast $tmLoadSavedQuery event, which will be heard by the
      * parent controller TranQueryController, which will reload the tran data
      * based on the selected query.
      */
     var onChangeSavedQuery = function() {
-        logger.info("SaveQueryFormController.onChangeSavedQuery: $scope.selectedSavedQuery=" + JSON.stringify($scope.selectedSavedQuery) );
+        logger.fine("onChangeSavedQuery: $scope.selectedSavedQuery=" + JSON.stringify($scope.selectedSavedQuery) );
 
         if ($scope.selectedSavedQuery != null) {
-            $rootScope.$broadcast("$loadSavedQuery", $scope.selectedSavedQuery);
+            // Set the location hash
+            $location.search( "savedQuery", $scope.selectedSavedQuery._id );
+
+            logger.fine("onChangeSavedQuery: broadcast $tmLoadSavedQuery savedQuery=" + JSON.stringify($scope.selectedSavedQuery) );
+            $rootScope.$broadcast("$tmLoadSavedQuery", $scope.selectedSavedQuery);
         }
 
     };
 
     /**
+     * Event hanlder for "$tmLoadSavedQuery" event.
+     *
+     * Update the viewmodel to match the selected saved query in the 
+     * combo box with the given saved query.
+     *
+     * @sideeffect update selectedSavedQuery
+     *
+     */
+    var onLoadSavedQuery = function(theEvent, savedQuery) {
+        logger.fine("onLoadSavedQuery: savedQuery=" + JSON.stringify(savedQuery));
+        $scope.selectedSavedQuery = savedQuery
+    };
+
+    $scope.$on("$tmLoadSavedQuery", onLoadSavedQuery);
+
+    /**
      * @return the set of savedQueries whose name begins with the searchText.
      */
     var getSavedQueries = function(searchText) {
-        logger.info("SaveQueryFormController.getSavedQueries: " + searchText );
+        logger.fine("getSavedQueries: " + searchText );
 
         if ( !MiscUtils.isEmpty(searchText) ) {
             return _.filter( $scope.savedQueries, 
@@ -647,14 +780,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
 
 /**
- * Controller for tran lists and queries.
+ * Controller for rendering the tran chart
  */
-.controller( "TranQueryController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "MiscUtils", "ChartUtils", "TranQueryBuilder",
-                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   MiscUtils,   ChartUtils,   TranQueryBuilder) {
+.controller( "TranChartController", ["$scope", "_",  "Logger", "DateUtils", "Datastore", "ChartUtils", "TranQueryBuilder",
+                            function( $scope,   _ ,   Logger,   DateUtils,   Datastore,   ChartUtils,   TranQueryBuilder) {
 
-    var logger = Logger.getLogger("TranQueryController", { all: false} );
-
-    logger.info("TranQueryController: alive! $location.search=" + JSON.stringify($location.search()));
+    var logger = Logger.getLogger("TranChartController", { info: true } );
+    logger.info("alive!");
 
     /**
      * Remember charts so we can clear them when the tran list is updated.
@@ -663,10 +795,15 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     var tranCanvasElement = document.getElementById("tm-tran-canvas-element");
 
     /**
+     * Remember current query to avoid reloading the same data if a dup event gets broadcast.
+     */
+    var currentQuery = null;
+
+    /**
      * Render the tran bar chart.
      */
     var renderChartByDay = function( trans ) {
-        logger.info("TranQueryController.renderChartByDay: ");
+        logger.fine("renderChartByDay: entry ");
 
         destroyTranChart( tranChart );
 
@@ -688,7 +825,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
             values[i] = 0;
         }
 
-        logger.info("TranQueryController.renderChartByDay: aggregate tran values...");
+        logger.fine("renderChartByDay: aggregate tran values...");
 
         // Step 3. Transform / reduce trans data 
         // Aggregate tran amounts on a per-day basis
@@ -704,22 +841,21 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         // Step 5. Create the actual values for the chart.
         values = _.map(values, function(val) { return Math.abs(val); } );   // absolute values
 
-        logger.info("TranQueryController.renderChartByDay: values=" + JSON.stringify(values));
+        logger.fine("renderChartByDay: values=" + JSON.stringify(values));
 
         renderChartWithThisData( ChartUtils.sampleEvenlyAndReplace( labels, 10, "" ),
                                  values,
                                  barColors );
 
-        logger.info("TranQueryController.renderChartByDay: exit");
+        logger.fine("renderChartByDay: exit");
     };
-
 
     /**
      * calls tranChart.destroy
      */
     var destroyTranChart = function(tranChart) {
         if (tranChart != null) {
-            logger.info("TranQueryController.destroyTranChart: clearing previous tran chart");
+            logger.fine("destroyTranChart: clearing previous tran chart");
             tranChart.destroy();
         }
     }
@@ -766,14 +902,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                     .Bar(data, { responsive: true });
 
         ChartUtils.setBarColors(tranChart, barColors);
-        logger.info("TranQueryController.renderChartWithThisData: exit");
+        logger.fine("renderChartWithThisData: exit");
     }
 
     /**
      * Render the tran by month bar chart.
      */
     var renderChartByMonth = function( trans ) {
-        logger.info("TranQueryController.renderChartByMonth: ");
+        logger.fine("renderChartByMonth: entry ");
 
         destroyTranChart(tranChart);
 
@@ -795,7 +931,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
             values[i] = { monthLabel: monthLabels[i], value: 0 };
         }
 
-        logger.info("TranQueryController.renderChartByMonth: values=" + JSON.stringify(values));
+        logger.fine("renderChartByMonth: values=" + JSON.stringify(values));
 
         // Step 3. Transform / reduce trans data 
         // Aggregate tran amounts on a per-month basis
@@ -814,9 +950,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         // Step 5. Create the actual values for the chart.
         var absPluckValues = _.map( pluckValues, function(val) { return Math.abs(val); } );   // absolute values
 
-        logger.fine("TranQueryController.renderChartByMonth: monthLabels=" + JSON.stringify(monthLabels));
-        logger.fine("TranQueryController.renderChartByMonth: values=" + JSON.stringify(values));
-        logger.fine("TranQueryController.renderChartByMonth: absPluckValues=" + JSON.stringify(absPluckValues));
+        logger.fine("renderChartByMonth: monthLabels=" + JSON.stringify(monthLabels));
+        logger.fine("renderChartByMonth: values=" + JSON.stringify(values));
+        logger.fine("renderChartByMonth: absPluckValues=" + JSON.stringify(absPluckValues));
 
         renderChartWithThisData( monthLabels, absPluckValues, barColors );
     };
@@ -827,7 +963,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     var renderChartByTags = function( trans ) {
 
         currentRenderChartFunction = renderChartByTags;
-        logger.info("TranQueryController.renderChartByTags: ");
+        logger.fine("renderChartByTags: entry");
 
         destroyTranChart(tranChart);
 
@@ -861,7 +997,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                    },
                                    {} );  
 
-        logger.info("TranQueryController.renderChartByTags: values=" + JSON.stringify(tagAmounts));
+        logger.fine("renderChartByTags: values=" + JSON.stringify(tagAmounts));
 
         // Step 3. Transform / reduce trans data 
         // Aggregate tran amounts on a per-tag basis
@@ -876,7 +1012,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
         // Step 4. Convert aggregated data to a simple array.
         var tagAmountsArray = _.map( tagLabels, function(tagLabel) { return tagAmounts[tagLabel]; } );
-        logger.fine("TranQueryController.renderChartByTags: tagAmountsArray=" + JSON.stringify(tagAmountsArray));
+        logger.fine("renderChartByTags: tagAmountsArray=" + JSON.stringify(tagAmountsArray));
 
         // Step 5. Create the positive/negative bar colors.
         var barColors = ChartUtils.createBarColors( tagAmountsArray );    // red and green bar colors
@@ -926,20 +1062,111 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     var currentRenderChartFunction = renderChartByTime;
 
     /**
-     * @return the accountId from the query string.
+     * @param chartTrans set them on scope in case we want to re-render them by tags or by time.
+     * @return chartTrans
      */
-    var parseAccountIdFromLocation = function() {
-        return $location.search().accountId || 0;
-    }
+    var setChartTrans = function(chartTrans) {
+        $scope.chartTrans = chartTrans;
+        $scope.isChartThinking = false;
+        return chartTrans;
+    };
+
+    /**
+     * Fetch amounts and tags from all trans (not just a single page),
+     * for chart data and full summaries.
+     *
+     * @return promise fullfilled with all trans
+     */
+    var fetchTranAmountsAndTags = function(query) {
+        var options = TranQueryBuilder.buildOptionsForAmountsAndTags();
+        $scope.isChartThinking = true;
+        return Datastore.fetchTrans( { query: query, options: options } );
+    };
+
+    /**
+     * Fetch tran data needed for chart according to the given query
+     */
+    var onTranQueryUpdated = function(theEvent, query) {
+        logger.info("onTranQueryUpdated: query=" + JSON.stringify(query));
+        $scope.isChartThinking = true;
+
+        if ( _.isEqual( currentQuery, query ) ) {
+            logger.info("onTranQueryUpdated: currentQuery same as updated query. Will not update."
+                                            + " currentQuery=" + JSON.stringify(currentQuery)
+                                            + ", updated query=" + JSON.stringify(query) );
+            return;
+        }
+
+        currentQuery = query;
+
+        fetchTranAmountsAndTags( _.extend( {}, query) )
+                 .then( setChartTrans )
+                 .then( renderChart );
+    };
+
+    $scope.$on( "$tmTranQueryUpdated", onTranQueryUpdated ) ;
+
+    /**
+     * Event hanlder for "$tmLoadSavedQuery" event.
+     *
+     * Load trans for the given query.
+     */
+    var onLoadSavedQuery = function(theEvent, savedQuery) {
+        logger.info("onLoadSavedQuery: savedQuery=" + JSON.stringify(savedQuery));
+        onTranQueryUpdated( theEvent, savedQuery.query );
+    };
+
+    $scope.$on("$tmLoadSavedQuery", onLoadSavedQuery);
+
+    /**
+     * Fetch transactions for the given account.
+     */
+    var onAccountLoaded = function(theEvent, account) {
+        logger.info("onAccountLoaded: account=" + JSON.stringify(account));
+        var query = TranQueryBuilder.buildQueryForAccount(account); 
+        onTranQueryUpdated(theEvent, query);
+    };
+
+    $scope.$on( "$tmAccountLoaded", onAccountLoaded) ;
+
+    /**
+     * Export to scope.
+     */
+    $scope.isChartThinking = true;
+    $scope.renderChartByTime = renderChartByTime;
+    $scope.renderChartByTags = renderChartByTags;
+
+}])
+
+
+/**
+ * Controller for tran lists.
+ */
+.controller( "TranListController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "MiscUtils", "ChartUtils", "TranQueryBuilder", "$rootScope", "$timeout",
+                           function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   MiscUtils,   ChartUtils,   TranQueryBuilder,   $rootScope,   $timeout) {
+
+    var logger = Logger.getLogger("TranListController", { all: true } );
+    logger.info("alive!");
+
+    /**
+     * For keeping track of paging.
+     */
+    var currentPage = 0;
+    var pageSize = 50;
+
+    /**
+     * For remembering the query when fetching the next page.
+     */
+    var currentQuery = null;
 
     /**
      * The "more" button ng-click.
      * Fetch the next page of trans.
      */
     var fetchNextPage = function() {
-        logger.fine("TranQueryController.fetchNextPage: $scope.page=" + $scope.page);
-        $scope.page += 1;
-        fetchTransByPage( $scope.postData, $scope.page, $scope.pageSize )
+        logger.fine("fetchNextPage: currentPage=" + currentPage);
+        currentPage += 1;
+        fetchTransByPage( currentQuery, currentPage, pageSize )
             .then( appendTrans );
     }
 
@@ -948,22 +1175,33 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Fetch all remaining trans .
      */
     var fetchAllRemainingTrans = function() {
-        logger.fine("TranQueryController.fetchAllRemainingTrans: $scope.page=" + $scope.page);
-        $scope.page += 1;
+        logger.fine("fetchAllRemainingTrans: currentPage=" + currentPage);
+        currentPage += 1;
 
-        $scope.postData.options = TranQueryBuilder.buildOptionsForAllRemainingTrans( $scope.page, $scope.pageSize );
+        var options = TranQueryBuilder.buildOptionsForAllRemainingTrans( currentPage, pageSize );
 
-        fetchTrans( $scope.postData )
+        fetchTrans( { query: currentQuery, options: options } )
             .then( appendTrans );
     };
 
     /**
      * @return promise fulfilled with trans
      */
-    var fetchTransByPage = function(postData, page, pageSize) {
-        postData.options = TranQueryBuilder.buildOptionsForNextPageOfTrans( page, pageSize );
-        return fetchTrans( postData );
+    var fetchTransByPage = function(query, page, pageSize) {
+        logger.fine("fetchTransByPage: query=" + JSON.stringify(query) + ", page=" + page + ", pageSize=" + pageSize);
+        var options = TranQueryBuilder.buildOptionsForNextPageOfTrans( page, pageSize );
+        return fetchTrans( { query: query, options: options } );
     };
+
+    /**
+     * Callback after fetching trans from the db.
+     *
+     * @return  $scope.trans, after being appended by the given trans.
+     */
+    var setTrans = function(trans) {
+        resetTranList();
+        appendTrans(trans);
+    }
 
     /**
      * Callback after fetching trans from the db.
@@ -979,11 +1217,11 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         $scope.transSums["amountValue"] = MiscUtils.sumField( $scope.trans, "amountValue" );
 
         // Mark "areAllTransFetched" = true, which will hid the "more" button.
-        if (trans.length < $scope.pageSize) {
+        if (trans.length < pageSize) {
             $scope.areAllTransFetched = true;
         }
 
-        logger.info("TranQueryController.appendTrans: areAllTransFetched=" + $scope.areAllTransFetched);
+        logger.fine("appendTrans: areAllTransFetched=" + $scope.areAllTransFetched);
         return $scope.trans;
     };
 
@@ -991,28 +1229,19 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * @return promise, fullfilled with tran data.
      */
     var fetchTrans = function(postData) {
+        logger.fine("fetchTrans: postData=" + JSON.stringify(postData));
         $scope.isThinking = true;
-        return Datastore.fetchTrans( postData );
-    };
-
-    /**
-     * Fetch amounts and tags from all trans (not just a single page),
-     * for chart data and full summaries.
-     *
-     * @return promise fullfilled with all trans
-     */
-    var fetchTranAmountsAndTags = function(postData) {
-        postData.options = TranQueryBuilder.buildOptionsForAmountsAndTags();
-        $scope.isChartThinking = true;
         return Datastore.fetchTrans( postData );
     };
 
     /**
      * Fetch the total number of trans for the account.
      */
-    var fetchTransSummary = function(postData) {
-        Datastore.fetchTransSummary( postData )
+    var fetchTransSummary = function(query) {
+        logger.fine("fetchTransSummary: query=" + JSON.stringify(query));
+        Datastore.fetchTransSummary( { query: query } )
                  .then( function(transSummary) { 
+                            logger.fine("fetchTransSummary: transSummary=" + JSON.stringify(transSummary));
                             $scope.transSummary = transSummary;
                         });
     };
@@ -1022,67 +1251,164 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var resetTranList = function() {
         $scope.trans = [];
-        $scope.page = 0;
+        currentPage = 0;
         $scope.areAllTransFetched = false;
     };
+
+    /**
+     * Fetch tran list in response to updated query.
+     */
+    var onTranQueryUpdated = function(theEvent, query) {
+        logger.info("onTranQueryUpdated: query=" + JSON.stringify(query));
+
+        if ( _.isEqual( currentQuery, query ) ) {
+            logger.info("onTranQueryUpdated: currentQuery same as updated query. Will not update."
+                                            + " currentQuery=" + JSON.stringify(currentQuery)
+                                            + ", updated query=" + JSON.stringify(query) );
+            return;
+        }
+
+        currentQuery = query;
+
+        resetTranList();
+
+        $scope.isThinking = true;
+
+        fetchTransSummary( query );     // TODO: can roll this into fetchTranAmountsAndTags (TranChartController)
+
+        fetchTransByPage( query, currentPage, pageSize )
+                 // Append trans to scope.
+                 .then( setTrans );
+    };
+
+    $scope.$on( "$tmTranQueryUpdated", onTranQueryUpdated ) ;
+
+    /**
+     * Event hanlder for "$tmLoadSavedQuery" event.
+     *
+     * Load trans for the given query.
+     */
+    var onLoadSavedQuery = function(theEvent, savedQuery) {
+        logger.info("onLoadSavedQuery: savedQuery=" + JSON.stringify(savedQuery));
+        onTranQueryUpdated( theEvent, savedQuery.query );
+    };
+
+    $scope.$on("$tmLoadSavedQuery", onLoadSavedQuery);
+
+    /**
+     * Fetch transactions for the given account.
+     */
+    var onAccountLoaded = function(theEvent, account) {
+        logger.info("onAccountLoaded: account=" + JSON.stringify(account));
+        var query = TranQueryBuilder.buildQueryForAccount(account); 
+        onTranQueryUpdated(null, query);
+    };
+
+    $scope.$on( "$tmAccountLoaded", onAccountLoaded) ;
+
+    /**
+     * Export to scope
+     */
+    $scope.isThinking = true;
+    $scope.trans = [];
+    $scope.transSums = {};  
+    $scope.transSummary = { "count": "xx", 
+                            "amountValue": 0 
+                          };
+
+    $scope.fetchNextPage = fetchNextPage;
+    $scope.fetchAllRemainingTrans = fetchAllRemainingTrans;
+    $scope.areAllTransFetched = false;
+
+}])
+
+/**
+ * Controller for trans.html
+ */
+.controller( "TranPageController", ["$scope", "_", "$location", "Logger", "DateUtils", "Datastore", "MiscUtils", "ChartUtils", "TranQueryBuilder", "$rootScope", "$timeout",
+                            function( $scope,   _ ,  $location,   Logger,   DateUtils,   Datastore,   MiscUtils,   ChartUtils,   TranQueryBuilder,   $rootScope,   $timeout) {
+
+    var logger = Logger.getLogger("TranPageController", { all: true } );
+    logger.info("alive!");
+
+    /**
+     * We must be embedded in the trans.html page.
+     * Fetch all trans.
+     */
+    var loadAllTrans = function() {
+        // broadcast update for other controllers.
+        // Need to queue it up via $timeout due to scope life-cycle issues.
+        // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
+        var query = {};
+        $timeout(function() {
+                     logger.fine("loadAllTrans: broadcast $tmTranQueryUpdated query=" + JSON.stringify(query) );
+                     $rootScope.$broadcast( "$tmTranQueryUpdated", query ) ;
+                 }, 1);
+    };
+
+    /**
+     * Executes when the page loads.
+     * Check $location for savedQuery, otherwise load all trans.
+     *
+     * TODO: this is causing the trans to be loaded twice, because the 
+     *       $tmLoadSavedQuery event is being emitted twice:
+     *       1. here
+     *       2. in SaveQueryFormController, when selectedSavedQuery is updated.
+     *      
+     */
+    var onLoad = function() {
+
+        if ( ! MiscUtils.isEmpty( $location.search().savedQuery ) ) {
+
+            logger.fine("onLoad: fetching saved query " + $location.search().savedQuery );
+            Datastore.fetchSavedQuery( $location.search().savedQuery )
+                     .then( function( savedQuery ) {
+                                if (savedQuery != null) {
+                                    logger.fine("onLoad: broadcasting saved query " + JSON.stringify(savedQuery) );
+                                    $rootScope.$broadcast("$tmLoadSavedQuery", savedQuery);
+                                } else {
+                                    loadAllTrans();
+                                }
+                            } );
+        } else {
+            loadAllTrans();
+        }
+    }
+
+
+    onLoad();
+
+    // Populate tags for auto-fill.
+    Datastore.fetchTags()
+             .then( function success(tags) { $scope.tags = tags; } ); 
+
+}])
+
+
+/**
+ * Controller for tran lists and queries.
+ */
+.controller( "TranQueryController", ["$scope", "_", "$location", "Logger",  "MiscUtils", "TranQueryBuilder", "$rootScope", "$timeout",
+                            function( $scope,   _ ,  $location,   Logger,    MiscUtils,   TranQueryBuilder,   $rootScope,   $timeout) {
+
+    var logger = Logger.getLogger("TranQueryController", { all: true } );
+    logger.info("alive!");
 
     /**
      * Called from the view.
      */
     var onQueryFormSubmit = function() {
 
-        resetTranList();
+        logger.fine("onQueryFormSubmit: entry");
         $scope.postData.query = TranQueryBuilder.buildQuery($scope);
 
-        reloadTrans();
-    };
-
-    /**
-     * @param chartTrans set them on scope in case we want to re-render them by tags or by time.
-     * @return chartTrans
-     */
-    var setChartTrans = function(chartTrans) {
-        $scope.chartTrans = chartTrans;
-        $scope.isChartThinking = false;
-        return chartTrans;
-    };
-
-    /**
-     * Fetch trans for the updated query.
-     */
-    var reloadTrans = function() {
-
-        fetchTransSummary($scope.postData);     // TODO: can roll this into fetchTranAmountsAndTags
-
-        fetchTranAmountsAndTags( _.extend( {}, $scope.postData) )
-                 .then( setChartTrans )
-                 .then( renderChart );
-
-        fetchTransByPage( $scope.postData, $scope.page, $scope.pageSize )
-                 // Append trans to scope.
-                 .then( appendTrans );
-    };
-
-
-    /**
-     * We must be embedded in the account.html page.
-     * Fetch the account trans.
-     */
-    var forAccountPage = function( accountId ) {
-        logger.info("TranQueryController.forAccountPage: accountId=" + accountId );
-        Datastore.fetchAccount( accountId )
-                 .then( function success(account) { 
-                            $scope.postData.query = TranQueryBuilder.buildQueryForAccount(account); 
-                            reloadTrans();
-                        });
-    };
-
-    /**
-     * We must be embedded in the trans.html page.
-     * Fetch all trans.
-     */
-    var forTransPage = function() {
-        reloadTrans();
+        // broadcast update for other controllers.
+        // Need to queue it up via $timeout due to scope life-cycle issues.
+        // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
+        $timeout(function() {
+                     logger.fine("reloadTrans: broadcast $tmTranQueryUpdated query=" + JSON.stringify($scope.postData.query) );
+                     $rootScope.$broadcast( "$tmTranQueryUpdated", $scope.postData.query ) ;
+                 }, 1);
     };
 
     /**
@@ -1091,7 +1417,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Add the tag to tagsFilter
      */
     var addTag = function() {
-        logger.info("TranQueryController.addTag: " + $scope.inputTagFilter);
+        logger.fine("addTag: " + $scope.inputTagFilter);
         var tag = $scope.inputTagFilter;
 
         // Clear the input field.
@@ -1103,7 +1429,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
         if ( ! _.contains($scope.tagsFilter, tag) ) {
             $scope.tagsFilter.push(tag);
-            logger.info("TranQueryController.addTag: $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter));
+            logger.fine("addTag: $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter));
         }
     };
 
@@ -1113,7 +1439,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      * Add the tag to tagsExcludeFilter
      */
     var addTagExclude = function() {
-        logger.info("TranQueryController.addTagExclude: " + $scope.inputTagExcludeFilter);
+        logger.fine("addTagExclude: " + $scope.inputTagExcludeFilter);
         var tag = $scope.inputTagExcludeFilter;
 
         // Clear the input field.
@@ -1125,7 +1451,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 
         if ( ! _.contains($scope.tagsExcludeFilter, tag) ) {
             $scope.tagsExcludeFilter.push(tag);
-            logger.info("TranQueryController.addTagExclude: $scope.tagsExcludeFilter=" + JSON.stringify($scope.tagsExcludeFilter));
+            logger.fine("addTagExclude: $scope.tagsExcludeFilter=" + JSON.stringify($scope.tagsExcludeFilter));
         }
     };
 
@@ -1135,7 +1461,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var removeTag = function(tag) {
         $scope.tagsFilter = _.filter( $scope.tagsFilter, function(t) { return t != tag; } );
-        logger.info("TranQueryController.removeTag: " + tag + ", $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter) );
+        logger.fine("removeTag: " + tag + ", $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter) );
     };
 
     /**
@@ -1144,19 +1470,18 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     var removeTagExclude = function(tag) {
         $scope.tagsExcludeFilter = _.filter( $scope.tagsExcludeFilter, function(t) { return t != tag; } );
-        logger.info("TranQueryController.removeTagExclude: " + tag + ", $scope.tagsExcludeFilter=" + JSON.stringify($scope.tagsExcludeFilter) );
+        logger.fine("removeTagExclude: " + tag + ", $scope.tagsExcludeFilter=" + JSON.stringify($scope.tagsExcludeFilter) );
     };
 
     /**
-     * Event hanlder for "$loadSavedQuery" event.
+     * Event hanlder for "$tmLoadSavedQuery" event.
      *
      * @sideeffect update $scope.postData and reload trans.
      *
      */
     var onLoadSavedQuery = function(theEvent, savedQuery) {
-        logger.info("TranQueryController.onLoadSavedQuery: savedQuery=" + JSON.stringify(savedQuery));
+        logger.fine("onLoadSavedQuery: savedQuery=" + JSON.stringify(savedQuery));
 
-        resetTranList();
         $scope.postData.query = savedQuery.query;
 
         // Reset all form data before parsing the query.
@@ -1169,22 +1494,21 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         // parse the query and fill in the form with the query parms
         $scope = _.extend( $scope, TranQueryBuilder.parseQuery( savedQuery.query ) );
 
-        logger.info("TranQueryController.onLoadSavedQuery: after parse: " 
+
+        logger.fine("onLoadSavedQuery: after parse: " 
                             + "$scope.startDate=" + $scope.startDate
                             + ", $scope.endDate=" + $scope.endDate
                             + ", $scope.tagsFilter=" + JSON.stringify($scope.tagsFilter)
                             + ", $scope.tagsExcludeFilter=" + JSON.stringify($scope.tagsExcludeFilter) );
-
-        reloadTrans();
     };
 
-    $scope.$on("$loadSavedQuery", onLoadSavedQuery);
+    $scope.$on("$tmLoadSavedQuery", onLoadSavedQuery);
 
     /**
      * Listens for $addTranTag events.
      */
     var onAddTranTag = function(theEvent, tag) {
-        logger.info("TranQueryController.onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
+        logger.fine("onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
 
         if ( ! _.contains($scope.tags, tag) ) {
             $scope.tags.push(tag);
@@ -1203,45 +1527,12 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     $scope.addTagExclude = addTagExclude;
     $scope.removeTagExclude = removeTagExclude;
     $scope.tagsExcludeFilter = [];
+    $scope.onQueryFormSubmit = onQueryFormSubmit;
 
     $scope.startDate = null;
     $scope.endDate = null;
     $scope.postData = {};
     $scope.MiscUtils = MiscUtils;
-
-    /**
-     * Init data
-     */
-    $scope.trans = [];
-    $scope.transSums = {};  
-    $scope.transSummary = { "count": "xx", 
-                            "amountValue": 0 
-                          };
-
-    // Technically these don't need to be put in $scope since they're not used by the view.
-    $scope.page = 0;
-    $scope.pageSize = 50;
-
-    $scope.fetchNextPage = fetchNextPage;
-    $scope.fetchAllRemainingTrans = fetchAllRemainingTrans;
-    $scope.areAllTransFetched = false;
-    $scope.onQueryFormSubmit = onQueryFormSubmit;
-    $scope.renderChartByTime = renderChartByTime;
-    $scope.renderChartByTags = renderChartByTags;
-
-    $scope.isThinking = true;
-    $scope.isChartThinking = true;
-
-    if ( parseAccountIdFromLocation() != 0 ) {
-        // We must be embedded in account.html.  Fetch account trans.
-        forAccountPage( parseAccountIdFromLocation() );
-    } else {
-        forTransPage();
-    }
-
-    // Populate tags for auto-fill.
-    Datastore.fetchTags()
-             .then( function success(tags) { $scope.tags = tags; } ); 
 
 }])
 
@@ -1647,8 +1938,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
 /**
  * Mongo datastore.
  */
-.factory("Datastore", [ "$http", "Logger", "_",
-               function( $http,   Logger,   _ ) {
+.factory("Datastore", [ "$http", "Logger", "_", "$rootScope", 
+               function( $http,   Logger,   _,   $rootScope ) {
 
     var logger = Logger.getLogger("Datastore", { all: false });
 
@@ -1692,6 +1983,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         return $http.get( "/accounts/" + accountId)
                     .then( function success(response) {
                                logger.fine( "fetchAccount: /accounts/" + accountId + ": response=" + JSON.stringify(response));
+
+                               logger.fine("fetchAccount: $rootScope.$broadcast($tmAccountLoaded)");
+                               $rootScope.$broadcast( "$tmAccountLoaded", response.data );
                                return response.data;
                            }, 
                            function error(response) {
@@ -1780,13 +2074,24 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                       "fields": getAccountFieldProjection() 
                                     } 
                        };
+        return queryAccounts(postData);
+    };
+
+    /**
+     * fetch accounts with isActive=true from db 
+     *
+     * @return promise
+     */
+    var queryAccounts = function(postData) {
+        postData.query = _.extend( { "mintMarker": 1 }, postData.query );
+        logger.info("queryAccounts: postData=" + JSON.stringify(postData));
 
         return $http.post( "/query/accounts", postData )
                     .then( function success(response) {
-                               logger.fine( "fetchActiveAccounts: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "queryAccounts: response=" + JSON.stringify(response,null,2));
                                return response.data;
                            }, function error(response) {
-                               logger.severe("fetchActiveAccounts: POST /query/accounts: response=" + JSON.stringify(response)); 
+                               logger.severe("queryAccounts: POST /query/accounts: response=" + JSON.stringify(response)); 
                            } );
     };
     
@@ -1921,6 +2226,24 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
     };
 
     /**
+     * GET /savedqueries/{id}
+     *
+     * @return promise
+     */
+    var fetchSavedQuery = function(savedQueryId) {
+        logger.info("fetchSavedQuery: savedQueryId=" + savedQueryId);
+
+        var url = "/savedqueries/" + savedQueryId ;
+        return $http.get( url )
+                    .then( function success(response) {
+                               logger.fine( "fetchSavedQuery: response=" + JSON.stringify(response,null,2));
+                               return response.data;
+                           }, function error(response) {
+                               logger.severe("fetchSavedQuery: GET " + url + ": response=" + JSON.stringify(response)); 
+                           } );
+    };
+
+    /**
      * POST /savedqueries {savedQuery}
      * @return promise
      */
@@ -1940,14 +2263,17 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
      */
     return {
         getTranFieldProjection: getTranFieldProjection,
+        getAccountFieldProjection: getAccountFieldProjection,
         fetchTags: fetchTags,
         fetchAccount: fetchAccount,
         fetchAccountTrans: fetchAccountTrans,
         fetchAccountTimeSeries: fetchAccountTimeSeries,
         fetchAccounts: fetchAccounts,
         fetchActiveAccounts: fetchActiveAccounts,
+        queryAccounts: queryAccounts,
         fetchNewTrans: fetchNewTrans,
         fetchSavedQueries: fetchSavedQueries,
+        fetchSavedQuery: fetchSavedQuery,
         saveQuery: saveQuery,
         fetchTrans: fetchTrans,
         fetchTransCount: fetchTransCount,
@@ -1982,7 +2308,28 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
                                  return memo + obj[fieldName]
                              }, 
                              0);
-        logger.fine("MiscUtils.sumField: fieldName=" + fieldName + ": " + retMe);
+        logger.fine("sumField: fieldName=" + fieldName + ": " + retMe);
+        return retMe;
+    };
+
+    /**
+     * @param objs a list of objs that contain the given fields
+     * @param fields, e.g.  ["value", "last7days", "last30days", "last90days", "last365days" ]
+     *
+     * @return an object where the keys are the field names and the values are the sums
+     */
+    var sumFields = function( objs, fields ) {
+        
+        logger.fine("sumFields: fields=" + JSON.stringify(fields));
+
+        var retMe = {};
+
+        _.each( fields,
+                function(fieldName) {
+                    retMe[fieldName] = sumField( objs, fieldName );
+                } );
+
+        logger.fine("sumFields: retMe=" + JSON.stringify(retMe));
         return retMe;
     };
 
@@ -2007,9 +2354,11 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial'] )
         return angular.isUndefined(x) || x == null;
     };
 
+
     return {
         currencyToNumber: currencyToNumber,
         sumField: sumField,
+        sumFields: sumFields,
         isEmpty: isEmpty,
         isDefined: isDefined,
         isNothing: isNothing

@@ -51,10 +51,10 @@
         </div>
     </div>
 
-    <div class="container" ng-controller="TranQueryController">
+    <div class="container" ng-controller="TranPageController">
 
         <div class="row">
-            <div class="tm-portal">
+            <div class="tm-portal" ng-controller="TranChartController">
                 <h3>Chart: Transactions 
                     <small>(<a href="" ng-click="renderChartByTime(chartTrans)">by time</a>)</small> 
                     <small>(<a href="" ng-click="renderChartByTags(chartTrans)">by tags</a>)</small>
@@ -69,125 +69,133 @@
         </div>
 
         <div class="row">
-            <div class="col-md-6">
-                <div class="tm-portal">
-                    <h4>Tag Inclusion Filter 
-                        <small>(<a href="" ng-init="showTagList=false" ng-click="showTagList = !showTagList">show all</a>)</small>
-                    </h4>
-                    <div ng-if="showTagList" class="tm-show-tags-list" >
-                        <span ng-repeat="tag in tags | orderBy " class="span-tag">{{tag}} </span>
+            <div class="container tm-portal tm-tran-query-form" ng-controller="TranQueryController">
+                    <h3>Filter Transactions</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="tm-portal">
+                                <h4>Tag Inclusion Filter 
+                                    <small>(<a href="" ng-init="showTagList=false" ng-click="showTagList = !showTagList">show all</a>)</small>
+                                </h4>
+                                <div ng-if="showTagList" class="tm-show-tags-list" >
+                                    <span ng-repeat="tag in tags | orderBy">
+                                        <span class="span-tag">{{tag}}</span>
+                                    </span>
+                                </div>
+                                <div class="tm-tag-filter-list">
+                                    <span ng-repeat="tag in tagsFilter">
+                                        <span class="span-tag">{{tag}}<a class="span-tag-x" href="" ng-click="removeTag(tag)">x</a></span>
+                                    </span>
+                                    <form class="form-tag" ng-submit="addTag()" >
+                                        <input type="text" 
+                                               id="input-tag-{{tran._id}}"
+                                               class="tm-input-tag form-control input-sm" 
+                                               pu-elastic-input 
+                                               style="min-width: 100px; max-width: 150px;"
+                                               ng-model="inputTagFilter" 
+                                               tm-auto-fill="tags"
+                                               placeholder="+"
+                                               autocomplete="off" />
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="tm-portal">
+                                <h4>Tag Exclusion Filter 
+                                    <small>(<a href="" ng-init="showTagList=false" ng-click="showTagExcludeList = !showTagExcludeList">show all</a>)</small>
+                                </h4>
+                                <div ng-if="showTagExcludeList" class="tm-show-tags-list" >
+                                    <span ng-repeat="tag in tags | orderBy">
+                                        <span class="span-tag">{{tag}}</span>
+                                    </span>
+                                </div>
+                                <div class="tm-tag-filter-list">
+                                    <span ng-repeat="tag in tagsExcludeFilter">
+                                        <span class="span-tag">{{tag}}<a class="span-tag-x" href="" ng-click="removeTagExclude(tag)">x</a></span>
+                                    </span>
+                                    <form class="form-tag" ng-submit="addTagExclude()" >
+                                        <input type="text" 
+                                               id="input-tag-{{tran._id}}"
+                                               class="tm-input-tag form-control input-sm" 
+                                               pu-elastic-input 
+                                               style="min-width: 100px; max-width: 150px;"
+                                               ng-model="inputTagExcludeFilter" 
+                                               tm-auto-fill="tags"
+                                               placeholder="+"
+                                               autocomplete="off" />
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="tm-tag-filter-list">
-                        <span ng-repeat="tag in tagsFilter" class="span-tag">
-                            {{tag}}
-                            <a class="span-tag-x" href="" ng-click="removeTag(tag)">x</a>
-                        </span>
-                        <form class="form-tag" ng-submit="addTag()" >
-                            <input type="text" 
-                                   id="input-tag-{{tran._id}}"
-                                   class="tm-input-tag form-control input-sm" 
-                                   pu-elastic-input 
-                                   style="min-width: 100px; max-width: 150px;"
-                                   ng-model="inputTagFilter" 
-                                   tm-auto-fill="tags"
-                                   placeholder="+"
-                                   autocomplete="off" />
-                        </form>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="tm-portal">
+                                <h4>Date Filter</h4>
+                                <div class="text-center">
+                                    <md-datepicker ng-model="startDate" md-placeholder="Start"></md-datepicker>
+                                    <b class="tm-datepicker-hyphen"> &#8213; </b>
+                                    <md-datepicker ng-model="endDate" md-placeholder="End"></md-datepicker>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="tm-portal">
+                                <h4>Merchant Filter</h4>
+                                <div class="tm-merchant-filter">
+                                    <input type="text" 
+                                           id="input-merchant"
+                                           class="form-control input-sm" 
+                                           ng-model="inputMerchant" 
+                                           placeholder="Name contains..."
+                                           autocomplete="off" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="tm-portal">
-                    <h4>Tag Exclusion Filter 
-                        <small>(<a href="" ng-init="showTagList=false" ng-click="showTagExcludeList = !showTagExcludeList">show all</a>)</small>
-                    </h4>
-                    <div ng-if="showTagExcludeList" class="tm-show-tags-list" >
-                        <span ng-repeat="tag in tags | orderBy " class="span-tag">{{tag}} </span>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="tm-portal">
+                                <h4>Apply Filter</h4>
+                                <div class="tm-run-query">
+                                    <button class="tm-tran-query-button btn btn-info btn-sm" ng-click="onQueryFormSubmit()">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <form class="tm-portal tm-save-query-form" ng-controller="SaveQueryFormController" > 
+                                <h4>Load &amp; Save Filter <small>(note: you must <b>Apply</b> the filter before saving it)</small></h4>
+                                <div class="tm-md-autocomplete">
+                                    <md-content>
+                                        <md-autocomplete md-selected-item="selectedSavedQuery" 
+                                                         md-selected-item-change="onChangeSavedQuery()"
+                                                         md-search-text="inputSavedQueryName" 
+                                                         md-items="savedQuery in getSavedQueries(inputSavedQueryName)" 
+                                                         md-item-text="savedQuery.name"
+                                                         md-no-cache="true"
+                                                         md-min-length="0"
+                                                         md-select-on-match="true"
+                                                         placeholder="Load saved filter...">
+                                            <md-item-template>
+                                                <span md-highlight-text="searchText">{{savedQuery.name}}</span>
+                                            </md-item-template>
+                                        </md-autocomplete>
+                                    </md-content>
+                                </div>
+                                <div class="text-center">
+                                    <button class="btn btn-info btn-sm" ng-click="saveQuery()">Save</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                    <div class="tm-tag-filter-list">
-                        <span ng-repeat="tag in tagsExcludeFilter" class="span-tag">
-                            {{tag}}
-                            <a class="span-tag-x" href="" ng-click="removeTagExclude(tag)">x</a>
-                        </span>
-                        <form class="form-tag" ng-submit="addTagExclude()" >
-                            <input type="text" 
-                                   id="input-tag-{{tran._id}}"
-                                   class="tm-input-tag form-control input-sm" 
-                                   pu-elastic-input 
-                                   style="min-width: 100px; max-width: 150px;"
-                                   ng-model="inputTagExcludeFilter" 
-                                   tm-auto-fill="tags"
-                                   placeholder="+"
-                                   autocomplete="off" />
-                        </form>
-                    </div>
-                </div>
             </div>
         </div>
 
         <div class="row">
-            <div class="col-md-6">
-                <div class="tm-portal">
-                    <h4>Date Filter</h4>
-                    <div class="text-center">
-                        <md-datepicker ng-model="startDate" md-placeholder="Start"></md-datepicker>
-                        <b class="tm-datepicker-hyphen"> &#8213; </b>
-                        <md-datepicker ng-model="endDate" md-placeholder="End"></md-datepicker>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="tm-portal">
-                    <h4>Merchant Filter</h4>
-                    <div class="tm-merchant-filter">
-                        <input type="text" 
-                               id="input-merchant"
-                               class="form-control input-sm" 
-                               ng-model="inputMerchant" 
-                               placeholder="Name contains..."
-                               autocomplete="off" />
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6">
-                <div class="tm-portal">
-                    <h4>Run Query</h4>
-                    <div class="tm-run-query">
-                        <button class="tm-tran-query-button btn btn-info btn-sm" ng-click="onQueryFormSubmit()">Go!</button>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <form class="tm-portal tm-save-query-form" ng-controller="SaveQueryFormController" > 
-                    <h4>Load &amp; Save Query <small>(note: you must <b>Run</b> the query before saving it)</small></h4>
-                    <div class="tm-md-autocomplete">
-                        <md-content>
-                            <md-autocomplete md-selected-item="selectedSavedQuery" 
-                                             md-selected-item-change="onChangeSavedQuery()"
-                                             md-search-text="inputSavedQueryName" 
-                                             md-items="savedQuery in getSavedQueries(inputSavedQueryName)" 
-                                             md-item-text="savedQuery.name"
-                                             md-no-cache="true"
-                                             md-min-length="0"
-                                             md-select-on-match="true"
-                                             placeholder="Load saved query...">
-                                <md-item-template>
-                                    <span md-highlight-text="searchText">{{savedQuery.name}}</span>
-                                </md-item-template>
-                            </md-autocomplete>
-                        </md-content>
-                    </div>
-                    <div class="text-center">
-                        <button class="btn btn-info btn-sm" ng-click="saveQuery()">Save</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="tm-portal" >
+            <div class="tm-portal" ng-controller="TranListController" >
                 <h3>Transactions <small>[{{trans.length}} of {{transSummary.count}}]</small> <span class="tm-grand-total"><small>Total Amount:</small> <span tm-is-debit="{{transSummary.amountValue < 0}}">{{ transSummary.amountValue | currency }}</span></span> </h3>
                 <table class="table table-condensed table-hover tm-tran-table">
                     <tr ng-include="'templates/tran-th.html'"></tr>

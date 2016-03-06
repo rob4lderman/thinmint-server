@@ -1,0 +1,240 @@
+<!DOCTYPE html/>
+<html ng-app="MyApp">
+
+<head>
+    <!-- TODO: load JS after html to improve rendering time -->
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular.min.js"></script>
+    <!-- script src="js/angular.min.js"></script -->
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore.js"></script>
+    <!-- script src="js/underscore-min.js"></script -->
+
+    <!-- load app module(s) _after_ angular (otherwise you'll get 'angular not defined') -->
+    <script src="js/angular-elastic-input.min.js"/></script>
+
+    <script src="js/my-app.js"/></script>
+
+    <!-- bootstrap -->
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <!-- link rel="stylesheet" href="css/bootstrap.min.css" -->
+
+    <link rel="stylesheet" href="css/my-app.css">
+
+    <!-- Angular Material style sheet -->
+    <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/angular_material/1.0.5/angular-material.min.css">
+    <!-- link rel="stylesheet" href="css/angular-material.min.css" -->
+  
+    <!-- Angular Material requires Angular.js Libraries -->
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular-animate.min.js"></script>
+    <!-- script src="js/angular-animate.min.js"></script -->
+
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular-aria.min.js"></script>
+    <script src="js/angular-aria.min.js"></script>
+
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular-messages.min.js"></script>
+    <!-- script src="js/angular-messages.min.js"></script -->
+
+    <!-- Angular Material Library -->
+    <script src="//ajax.googleapis.com/ajax/libs/angular_material/1.0.5/angular-material.min.js"></script>
+    <!-- script src="js/angular-material.min.js"></script -->
+
+    <!-- Chart.js -->
+    <script src="//cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script>
+    <!-- script src="js/Chart.js"></script -->
+</head>
+
+<body>
+    <div id="tm-page-header" class="container-fluid">
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/trans.html">Transactions</a>
+            <a href="/trans2.html#?accountTypes=Cash">Cash Accounts</a>
+            <a href="/trans2.html#?accountTypes=Investment">Investment Accounts</a>
+        </div>
+    </div>
+
+    <div class="container" ng-controller="TranQueryController">
+
+        <div ng-controller="AccountListController" class="tm-portal tm-account-list">
+            <h3>{{accountTypes}} Accounts</h3>
+            <table class="table table-condensed table-hover">
+                <tr ng-include="'templates/account-th.html'"></tr>
+                <tr ng-repeat="account in accounts" ng-include="'templates/account-tr.html'"></tr>
+
+                <tr class="tm-account-list-total">
+                    <th class="text-right" tm-is-debit='{{ accountsSums["value"] < 0 }}'>{{ accountsSums["value"] | currency }}</th>
+                    <th>Total</th>
+                    <th class="text-right" tm-is-debit='{{ accountsSums["last7days"] < 0 }}'>{{ accountsSums["last7days"] | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ accountsSums["last30days"] < 0 }}'>{{ accountsSums["last30days"] | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ accountsSums["last90days"] < 0 }}'>{{ accountsSums["last90days"] | currency }}</th>
+                    <th class="text-right" tm-is-debit='{{ accountsSums["last365days"] < 0 }}'>{{ accountsSums["last365days"] | currency }}</th>
+                    <th></th>
+                </tr>
+            </table>
+            <div class="text-center">
+                <img src="icons/thinking.gif" ng-if="isThinking"/>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="tm-portal">
+                <h3>Chart: Transactions 
+                    <small>(<a href="" ng-click="renderChartByTime(chartTrans)">by time</a>)</small> 
+                    <small>(<a href="" ng-click="renderChartByTags(chartTrans)">by tags</a>)</small>
+                </h3>
+                <div>
+                    <div class="tm-tran-canvas-thinking" > 
+                        <img src="icons/thinking.gif" ng-if="isChartThinking"/>
+                    </div>
+                    <canvas id="tm-tran-canvas-element" width="1000" height="350" ></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="tm-portal">
+                    <h4>Tag Inclusion Filter 
+                        <small>(<a href="" ng-init="showTagList=false" ng-click="showTagList = !showTagList">show all</a>)</small>
+                    </h4>
+                    <div ng-if="showTagList" class="tm-show-tags-list" >
+                        <span ng-repeat="tag in tags | orderBy " class="span-tag">{{tag}} </span>
+                    </div>
+                    <div class="tm-tag-filter-list">
+                        <span ng-repeat="tag in tagsFilter" class="span-tag">
+                            {{tag}}
+                            <a class="span-tag-x" href="" ng-click="removeTag(tag)">x</a>
+                        </span>
+                        <form class="form-tag" ng-submit="addTag()" >
+                            <input type="text" 
+                                   id="input-tag-{{tran._id}}"
+                                   class="tm-input-tag form-control input-sm" 
+                                   pu-elastic-input 
+                                   style="min-width: 100px; max-width: 150px;"
+                                   ng-model="inputTagFilter" 
+                                   tm-auto-fill="tags"
+                                   placeholder="+"
+                                   autocomplete="off" />
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="tm-portal">
+                    <h4>Tag Exclusion Filter 
+                        <small>(<a href="" ng-init="showTagList=false" ng-click="showTagExcludeList = !showTagExcludeList">show all</a>)</small>
+                    </h4>
+                    <div ng-if="showTagExcludeList" class="tm-show-tags-list" >
+                        <span ng-repeat="tag in tags | orderBy " class="span-tag">{{tag}} </span>
+                    </div>
+                    <div class="tm-tag-filter-list">
+                        <span ng-repeat="tag in tagsExcludeFilter" class="span-tag">
+                            {{tag}}
+                            <a class="span-tag-x" href="" ng-click="removeTagExclude(tag)">x</a>
+                        </span>
+                        <form class="form-tag" ng-submit="addTagExclude()" >
+                            <input type="text" 
+                                   id="input-tag-{{tran._id}}"
+                                   class="tm-input-tag form-control input-sm" 
+                                   pu-elastic-input 
+                                   style="min-width: 100px; max-width: 150px;"
+                                   ng-model="inputTagExcludeFilter" 
+                                   tm-auto-fill="tags"
+                                   placeholder="+"
+                                   autocomplete="off" />
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="tm-portal">
+                    <h4>Date Filter</h4>
+                    <div class="text-center">
+                        <md-datepicker ng-model="startDate" md-placeholder="Start"></md-datepicker>
+                        <b class="tm-datepicker-hyphen"> &#8213; </b>
+                        <md-datepicker ng-model="endDate" md-placeholder="End"></md-datepicker>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="tm-portal">
+                    <h4>Merchant Filter</h4>
+                    <div class="tm-merchant-filter">
+                        <input type="text" 
+                               id="input-merchant"
+                               class="form-control input-sm" 
+                               ng-model="inputMerchant" 
+                               placeholder="Name contains..."
+                               autocomplete="off" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="tm-portal">
+                    <h4>Run Query</h4>
+                    <div class="tm-run-query">
+                        <button class="tm-tran-query-button btn btn-info btn-sm" ng-click="onQueryFormSubmit()">Go!</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <form class="tm-portal tm-save-query-form" ng-controller="SaveQueryFormController" > 
+                    <h4>Load &amp; Save Query <small>(note: you must <b>Run</b> the query before saving it)</small></h4>
+                    <div class="tm-md-autocomplete">
+                        <md-content>
+                            <md-autocomplete md-selected-item="selectedSavedQuery" 
+                                             md-selected-item-change="onChangeSavedQuery()"
+                                             md-search-text="inputSavedQueryName" 
+                                             md-items="savedQuery in getSavedQueries(inputSavedQueryName)" 
+                                             md-item-text="savedQuery.name"
+                                             md-no-cache="true"
+                                             md-min-length="0"
+                                             md-select-on-match="true"
+                                             placeholder="Load saved query...">
+                                <md-item-template>
+                                    <span md-highlight-text="searchText">{{savedQuery.name}}</span>
+                                </md-item-template>
+                            </md-autocomplete>
+                        </md-content>
+                    </div>
+                    <div class="text-center">
+                        <button class="btn btn-info btn-sm" ng-click="saveQuery()">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="tm-portal" >
+                <h3>Transactions <small>[{{trans.length}} of {{transSummary.count}}]</small> <span class="tm-grand-total"><small>Total Amount:</small> <span tm-is-debit="{{transSummary.amountValue < 0}}">{{ transSummary.amountValue | currency }}</span></span> </h3>
+                <table class="table table-condensed table-hover tm-tran-table">
+                    <tr ng-include="'templates/tran-th.html'"></tr>
+                    <tr ng-repeat="tran in trans" ng-include="'templates/tran-tr.html'"></tr>
+
+                    <tr class="tm-list-totals">
+                        <th></th>
+                        <th class="text-right" tm-is-debit="{{ transSums['amountValue'] < 0 }}" >{{ transSums['amountValue'] | currency}}</th>
+                        <th></th>    <!-- pending -->
+                        <th>Total</th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </table>
+                <img src="icons/thinking.gif" ng-if="isThinking"/>
+                <button ng-if="!areAllTransFetched && !isThinking" class="btn btn-info btn-sm" ng-click="fetchNextPage()">more</button>
+                <!-- button ng-if="!areAllTransFetched && !isThinking" class="btn btn-info btn-sm tm-fetch-all-trans-button" ng-click="fetchAllRemainingTrans()">all</button -->
+            </div>
+        </div>
+    </div>
+
+    <div id="tm-page-footer" class="container-fluid">
+    </div>
+
+</body>
+</html>
+

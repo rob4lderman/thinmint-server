@@ -35,10 +35,16 @@ a:hover, #tm-page-header a:hover {
     padding-bottom: 5px;
 }
 
-h3, h4 {
+h3 {
     background-color: #eff;
     padding: 10px;
 }
+
+h4 {
+    background-color: #fee;
+    padding: 10px;
+}
+
 
 .tm-portal h3:first-child, .tm-portal h4:first-child {
     margin-top: 0px;
@@ -191,11 +197,16 @@ tr td.tran-ispending {
     color: #b00;
 }
 
+
 .tm-portal {
     border: solid 1px #ddd;
     padding: 10px;
     border-radius: 5px;
     margin-top: 40px;
+}
+
+.tm-tran-query-form .tm-portal {
+    margin-top: 20px;
 }
 
 form.tm-portal {

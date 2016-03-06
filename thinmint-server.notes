@@ -1,3 +1,36 @@
+TODO: need to break up TranQueryController.
+      use Events to communicate between controllers/views
+      E.g use event to signal when tran filter is updated
+        - let each controller decide how to handle the filter
+            - e.g TranListController will download trans by page
+            - e.g. ChartController will download all trans
+
+
+TODO: separate investments from bank/credit accounts. trxType=0|1
+      separate trans page for each: bank/credit, investment/other
+      put bank/credit accounts summary at the top of trans page
+
+TODO: trans page: don't immediately download ALL transactions. make the user ask for them (by clicking "Run" with an empty form).
+
+TODO: add tran query form to account page.
+
+TODO: add saved query list to front page (maybe add to header?)
+
+TODO: more javascript charts!!!   what else?
+
+TODO: account "nickname" - display in trans
+
+TODO: tran "memo" or "notes" field - could display in Merchant field.
+
+TODO: mintclient.py: check if mint tran is any different from thinmint tran before doing upsert (perf)
+
+TODO: add paging to "new Transactions"
+
+TODO: probably want to separate thinmint data (e.g. tags) from mint data, since mint fucks with the data all the time,
+      which is really only a problem if thinmint data gets lost because of it.
+      separate table - tm-transactions (or something)
+      can't rely on ID (but can try)
+      need to also capture date, amount, fi, account, merchant, etc, whatever it takes to match it up with brand new tran (with diff id)
 
 
 done: tran query page (filter by account, by tag, by merchant?, by date range, by amount range?)
@@ -7,13 +40,12 @@ done: tran query page (filter by account, by tag, by merchant?, by date range, b
       date: after 01/01/16 and before 02/02/16
       amount: over 30.00 or under 10
 
-TODO: more javascript charts!!!   what else?
-
     
 TODO: don't create a new accountsTimeSeries record if the balance hasn't changed since the last one...
       or... remove the last one and insert a new one with the current day?
       no.  because when the balance changes, it'll look like a gradual change between the last
-      accountTimeSeries record and this one?  actually... no that's not correct either.
+      accountTimeSeries record and this one?  actually... no that's not correct either, because
+      we'll add a new record for the new balance.
 
 
 done: match up pending trans with completed trans  
@@ -25,10 +57,6 @@ done: match up pending trans with completed trans
             transfer tags + other fields from pending tran to completed tran 
             remove pendingTran 
 
-
-
-TODO: account "nickname" - display in trans
-TODO: tran "memo" or "notes" field
 
 done: add indexes for timestamp, account, fi
       db.transactions.createIndex( { timestamp: -1 } )

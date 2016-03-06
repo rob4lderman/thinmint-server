@@ -461,6 +461,30 @@ app.get('/savedqueries',
                     });
 });
 
+/**
+ * REST API
+ * @return the saved query with the given id
+ */
+app.get('/savedqueries/:id', 
+        passport.authenticate('basic', { session: false }),
+        function (req, res) {
+
+    console.log("GET /savedqueries/" + req.params.id);
+
+    var collection = req.db.get('savedqueries');
+    collection.id = function (id) { return id; };  // http://stackoverflow.com/questions/25889863/play-with-meteor-mongoid-in-monk
+
+    collection.findOne({ "_id": req.params.id },
+                       {},
+                       function(err,savedQuery) {
+                           if (savedQuery) {
+                               savedQuery.query = JSON.parse(savedQuery.query);
+                           }
+                           console.log("GET /savedqueries: savedQuery: " + JSON.stringify(savedQuery)
+                                                               + ", err: " + JSON.stringify(err) );
+                           res.json(savedQuery);
+                       });
+});
 
 
 
