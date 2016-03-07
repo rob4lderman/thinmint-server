@@ -1,0 +1,13 @@
+<div class="tm-portal" ng-controller="TranChartController">
+    <h3>Chart: Transactions 
+        <small>(<a href="" ng-click="renderChartByTime(chartTrans)">by time</a>)</small> 
+        <small>(<a href="" ng-click="renderChartByTags(chartTrans)">by tags</a>)</small>
+    </h3>
+
+    <div class="text-center">
+        <div class="tm-tran-canvas-thinking" > 
+            <img src="icons/thinking.gif" ng-if="isChartThinking"/>
+        </div>
+        <canvas id="tm-tran-canvas-element" width="1000" height="350"></canvas>
+    </div>
+</div>

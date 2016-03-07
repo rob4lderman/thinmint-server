@@ -55,38 +55,23 @@
         </div>
     </div>
 
-    <div class="container" ng-controller="AccountPageController">
+    <div class="container" ng-controller="AccountsPageController">
 
-        <!-- account summary -->
-        <div class="tm-portal tm-account-summary" ng-controller="SingleAccountSummaryController">
-            <h3>Account Summary</h3>
-            <table class="table table-condensed table-hover tm-account-list">
-                <tr ng-include="'templates/account-th.html'"></tr>
-                <tr ng-include="'templates/account-tr.html'"></tr>
-            </table>
-            <div class="text-center"> 
-                <img src="icons/thinking.gif" ng-if="isThinking"/>
+        <div class="row">
+            <div ng-include="'templates/account-list.html'"> 
             </div>
         </div>
 
-        <!-- account charts -->
-        <div class="tm-portal" ng-controller="AccountTimeSeriesChartController">
-            <h3>Time Series: Account Balance</h3>
-            <div class="text-center">
-                <div class="tm-tran-canvas-thinking" > 
-                    <img src="icons/thinking.gif" ng-if="isChartThinking"/>
-                </div>
-                <canvas id="valueChart" width="1000" height="350"></canvas>
-            </div>
-        </div>
-
-        <div>
+        <div class="row">
             <div ng-include="'templates/tran-chart.html'"> 
             </div>
+        </div>
 
+        <div class="row">
             <div ng-include="'templates/tran-list.html'"> 
             </div>
         </div>
+
     </div>
 
     <div id="tm-page-footer" class="container-fluid">

@@ -1,18 +1,10 @@
-TODO: need to break up TranQueryController.
-      use Events to communicate between controllers/views
-      E.g use event to signal when tran filter is updated
-        - let each controller decide how to handle the filter
-            - e.g TranListController will download trans by page
-            - e.g. ChartController will download all trans
 
 
-TODO: separate investments from bank/credit accounts. trxType=0|1
-      separate trans page for each: bank/credit, investment/other
-      put bank/credit accounts summary at the top of trans page
+TODO: include trxType=0|1 in tran query form.
 
 TODO: trans page: don't immediately download ALL transactions. make the user ask for them (by clicking "Run" with an empty form).
 
-TODO: add tran query form to account page.
+TODO: add tran query form to accounts page.
 
 TODO: add saved query list to front page (maybe add to header?)
 

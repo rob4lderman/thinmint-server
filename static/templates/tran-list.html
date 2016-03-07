@@ -1,0 +1,21 @@
+<!-- release on $scope.tags being set in parent scope -->
+<div class="tm-portal" ng-controller="TranListController" >
+    <h3>Transactions <small>[{{trans.length}} of {{transSummary.count}}]</small> <span class="tm-grand-total"><small>Total Amount:</small> <span tm-is-debit="{{transSummary.amountValue < 0}}">{{ transSummary.amountValue | currency }}</span></span> </h3>
+    <table class="table table-condensed table-hover tm-tran-table">
+        <tr ng-include="'templates/tran-th.html'"></tr>
+        <tr ng-repeat="tran in trans" ng-include="'templates/tran-tr.html'"></tr>
+
+        <tr class="tm-list-totals">
+            <th></th>
+            <th class="text-right" tm-is-debit="{{ transSums['amountValue'] < 0 }}" >{{ transSums['amountValue'] | currency}}</th>
+            <th></th>    <!-- pending -->
+            <th>Total</th>
+            <th></th>
+            <th></th>
+        </tr>
+    </table>
+    <img src="icons/thinking.gif" ng-if="isThinking"/>
+    <button ng-if="!areAllTransFetched && !isThinking" class="btn btn-info btn-sm" ng-click="fetchNextPage()">more</button>
+    <!-- button ng-if="!areAllTransFetched && !isThinking" class="btn btn-info btn-sm tm-fetch-all-trans-button" ng-click="fetchAllRemainingTrans()">all</button -->
+</div>
+

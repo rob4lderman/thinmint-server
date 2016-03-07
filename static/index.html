@@ -13,6 +13,7 @@
     <script src="js/angular-elastic-input.min.js"/></script>
 
     <script src="js/my-app.js"/></script>
+    <script src="js/tm-factories.js"/></script>
 
     <!-- bootstrap -->
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
@@ -44,6 +45,9 @@
     <div id="tm-page-header" class="container-fluid">
         <div class="container">
             <a href="/">Home</a>
+            <a href="/accounts.html">Accounts</a>
+            <a href="/accounts.html#?accountTypes=Cash">Cash Accounts</a>
+            <a href="/accounts.html#?accountTypes=Investment">Investment Accounts</a>
             <a href="/trans.html">Transactions</a>
         </div>
     </div>
@@ -52,7 +56,7 @@
 
         <div class="tm-portal" ng-controller="NewTransController">
             <h3>New Transactions <small>(awaiting your <b>ack</b>-nowledgement)</small></h3>
-            <table class="table table-condensed table-hover tm-tran-table">
+            <table class="table table-condensed table-hover tm-tran-table" ng-if="!isThinking">
                 <tr ng-include="'templates/new-tran-th.html'"></tr>
                 <tr ng-repeat="tran in newTrans" ng-include="'templates/new-tran-tr.html'"></tr>
 
@@ -67,7 +71,7 @@
                 </tr>
 
             </table>
-            <div class="text-center">
+            <div>
                 <img src="icons/thinking.gif" ng-if="isThinking"/>
             </div>
         </div>
@@ -82,10 +86,10 @@
                     <tr class="tm-account-list-total">
                         <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["value"] < 0 }}'>{{ bankAndCreditAccountsSums["value"] | currency }}</th>
                         <th>Total</th>
-                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last7days"] < 0 }}'>{{ bankAndCreditAccountsSums["last7days"] | currency }}</th>
-                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last30days"] < 0 }}'>{{ bankAndCreditAccountsSums["last30days"] | currency }}</th>
-                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last90days"] < 0 }}'>{{ bankAndCreditAccountsSums["last90days"] | currency }}</th>
-                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last365days"] < 0 }}'>{{ bankAndCreditAccountsSums["last365days"] | currency }}</th>
+                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last7days"] < 0 }}'>{{ bankAndCreditAccountsSums["last7days"] | currency:"$":0 }}</th>
+                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last30days"] < 0 }}'>{{ bankAndCreditAccountsSums["last30days"] | currency:"$":0 }}</th>
+                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last90days"] < 0 }}'>{{ bankAndCreditAccountsSums["last90days"] | currency:"$":0 }}</th>
+                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last365days"] < 0 }}'>{{ bankAndCreditAccountsSums["last365days"] | currency:"$":0 }}</th>
                         <th></th>
                     </tr>
                 </table>
@@ -103,10 +107,10 @@
                     <tr class="tm-account-list-total">
                         <th class="text-right" tm-is-debit='{{ investmentAccountsSums["value"] < 0 }}'>{{ investmentAccountsSums["value"] | currency }}</th>
                         <th>Total</th>
-                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last7days"] < 0 }}'>{{ investmentAccountsSums["last7days"] | currency }}</th>
-                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last30days"] < 0 }}'>{{ investmentAccountsSums["last30days"] | currency }}</th>
-                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last90days"] < 0 }}'>{{ investmentAccountsSums["last90days"] | currency }}</th>
-                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last365days"] < 0 }}'>{{ investmentAccountsSums["last365days"] | currency }}</th>
+                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last7days"] < 0 }}'>{{ investmentAccountsSums["last7days"] | currency:"$":0 }}</th>
+                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last30days"] < 0 }}'>{{ investmentAccountsSums["last30days"] | currency:"$":0 }}</th>
+                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last90days"] < 0 }}'>{{ investmentAccountsSums["last90days"] | currency:"$":0 }}</th>
+                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last365days"] < 0 }}'>{{ investmentAccountsSums["last365days"] | currency:"$":0 }}</th>
                         <th></th>
                     </tr>
 
@@ -123,10 +127,10 @@
                     <tr class="tm-account-list-total">
                         <th class="text-right" tm-is-debit='{{ getNetWorth() < 0 }}'>{{ getNetWorth() | currency }}</th>
                         <th>Net worth</th>
-                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last7days" ) < 0 }}'>{{ getNetWorthPerf( "last7days" ) | currency }}</th>
-                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last30days" ) < 0 }}'>{{ getNetWorthPerf( "last30days" ) | currency }}</th>
-                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last90days" ) < 0 }}'>{{ getNetWorthPerf( "last90days" ) | currency }}</th>
-                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last365days" ) < 0 }}'>{{ getNetWorthPerf( "last365days" ) | currency }}</th>
+                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last7days" ) < 0 }}'>{{ getNetWorthPerf( "last7days" ) | currency:"$":0 }}</th>
+                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last30days" ) < 0 }}'>{{ getNetWorthPerf( "last30days" ) | currency:"$":0 }}</th>
+                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last90days" ) < 0 }}'>{{ getNetWorthPerf( "last90days" ) | currency:"$":0 }}</th>
+                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last365days" ) < 0 }}'>{{ getNetWorthPerf( "last365days" ) | currency:"$":0 }}</th>
                         <th></th>
                     </tr>
                 </table>
