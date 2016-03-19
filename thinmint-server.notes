@@ -1,5 +1,7 @@
 
 
+TODO: password encryption
+
 TODO: include trxType=0|1 in tran query form.
 
 TODO: trans page: don't immediately download ALL transactions. make the user ask for them (by clicking "Run" with an empty form).
@@ -62,6 +64,43 @@ done: all investments trans have txnType=1, everything else txnType=0
       technically this is "income" too... 
       autotag! "investment"
 
+
+===================================================================================================
+Password encryption
+
+Want to store mint username/passwords in DB.
+
+Use two-way hashing of passwords
+
+Store private key in heroku ENV variable
+    - make sure it's not accessible to public
+
+Add individual (account-specific) salt to each password
+    - slows down brute force attack
+    - salt must be account-specific.  
+        - using same salt for all accounts can be hacked if the hacker creates an account himself
+          where he knows the password and therefore can determine the salt
+
+Types of attacks:
+    brute force
+    dictionary attack: dict of pre-computed hashes for common passwords
+    rainbow table
+
+python: 
+http://stackoverflow.com/questions/11132714/python-two-way-alphanumeric-encryption
+https://gist.github.com/sekondus/4322469
+
+node.js:
+http://stackoverflow.com/questions/6953286/node-js-encrypting-data-that-needs-to-be-decrypted
+
+use AES.  https://en.wikipedia.org/wiki/Advanced_Encryption_Standard
+block size=128 bits
+key size=128, 192, or 256 bits
+
+
+TODO: block size?
+        
+TODO: private key
 
 
 ===================================================================================================

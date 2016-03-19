@@ -789,8 +789,8 @@ angular.module( "tmFactories", [] )
 /**
  * Put various stuff in here until better homes can be found.
  */
-.factory( "MiscUtils", [ "Logger", "$rootScope", "$timeout",
-                 function(Logger,   $rootScope,   $timeout) {
+.factory( "MiscUtils", [ "Logger", "$rootScope", "$timeout", "_",
+                 function(Logger,   $rootScope,   $timeout,   _) {
 
     var logger = Logger.getLogger("MiscUtils", {info:false});
 
@@ -856,19 +856,63 @@ angular.module( "tmFactories", [] )
         return angular.isUndefined(x) || x == null;
     };
 
+    /**
+     * Keep track of fired events.
+     * { eventName: eventData, ... }
+     */
+    var firedEvents = {};
 
     /**
      * $rootScope.$broadcast(eventName, eventData), wrapped in a $timeout.
      */
     var $broadcast = function(eventName, eventData) {
+        logger.info("$broadcast: eventName=" + eventName );
         // Broadcast event 
         // Need to queue it up via $timeout due to scope life-cycle issues.
         // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
         $timeout(function() {
-                     logger.info("$broadcast: eventName=" + eventName );
-                     logger.fine("$broadcast: eventName=" + eventName  + ", eventData=" + JSON.stringify(eventData) );
+                     logger.fine("$timeout:$broadcast: eventName=" + eventName  + ", eventData=" + JSON.stringify(eventData) );
                      $rootScope.$broadcast( eventName, eventData );
                  }, 1);
+
+        // Keep track of the event for any late-loaded controllers (e.g. from a partial) that might be interested in it.
+        firedEvents[eventName] = eventData;
+    };
+
+    /**
+     * Registers the callbackFn for the given eventName on the given $scope.
+     *
+     * If a $broadcast for the event has already been called (registered with firedEvents), then
+     * the callbackFn will be invoked (async'ly via $timeout) with the event data.  This is for
+     * late-loaded controllers that might have missed the event.
+     */
+    var $on = function($scope, eventName, callbackFn) {
+        $scope.$on(eventName, callbackFn);
+
+        if ( isDefined(firedEvents[eventName]) ) {
+            logger.info("$on: the event " + eventName + " may have already fired. Will queue up a call to the callbackFn." );
+            logger.fine("$on: eventName=" + eventName + ",eventData=" + JSON.stringify(firedEvents[eventName]) );
+            $timeout( _.partial( callbackFn, {}, firedEvents[eventName] ), 
+                      1 );
+        }
+    };
+
+    /**
+     * @return a DupEventChecker object, which maintains prevEventData / currEventData state
+     *         to detect dup events.
+     */
+    var getDupEventChecker = function(logger) {
+        return { 
+            prevEventData: null,
+            isDupEvent: function(currEventData) {
+                var retMe = (this.prevEventData == currEventData);
+                if (retMe) {
+                    logger.info( "isDupEvent: " + retMe + ", prevEventData=" + this.prevEventData + ", currEventData=" + currEventData );
+                }
+                this.prevEventData = currEventData;
+                return retMe;
+            }
+        }
     };
 
     return {
@@ -878,7 +922,9 @@ angular.module( "tmFactories", [] )
         isEmpty: isEmpty,
         isDefined: isDefined,
         isNothing: isNothing,
-        "$broadcast": $broadcast
+        "$on": $on,
+        "$broadcast": $broadcast,
+        getDupEventChecker: getDupEventChecker
     };
 }])
 

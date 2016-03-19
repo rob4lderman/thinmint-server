@@ -1,6 +1,37 @@
 angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
 /**
+ * Events:
+ *
+ * $tmLoadSavedQuery:
+ *      Emitter: SaveQueryFormController.onChangeSavedQuery
+ *      Emitter: TranPageController.onLoad
+ *      Listener: SaveQueryFormController
+ *      Listener: TranChartController
+ *      Listener: TranQueryController
+ *      Listener: TranListController
+ *
+ * $tmTranQueryUpdated
+ *      Emitter: AccountsPageController.onLoad
+ *      Emitter: TranPageController.onLoad
+ *      Emitter: TranQueryController.onQueryFormSubmit
+ *      Listener: TranChartController
+ *      Listener: TranListController
+ *
+ *
+ * $tmAccountsLoaded
+ *      Emitter: AccountsPageController.onLoad -> Datastore
+ *      Listener: AccountListController
+ *
+ * $tmAccountIdSelected
+ *      Emitter: AccountPageController
+ *      Listener: SingleAccountSummaryController
+ *      Listener: AccountTimeSeriesChartController
+ *
+ *
+ */
+
+/**
  * TODO: separate controllers for subsets of accounts? then the summation html could be ng-included.
  *       http://stackoverflow.com/questions/13811948/different-ng-includes-on-the-same-page-how-to-send-different-variables-to-each
  *
@@ -154,6 +185,17 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         Datastore.queryAccounts( { query: query, options: options } );
 
         // Broadcast the $tmTranQueryUpdated event 
+        // TODO: even with the timeout this event is still being fired before
+        //       other controllers have loaded (e.g. TranListController, which is
+        //       loaded from a partial, so loaded in a different run cycle), so they
+        //       don't see the event and therefore don't load the appropriate data.
+        //       How to solve this? SO doesn't know.
+        //       how about... keeping track of fired events somehow...
+        //       when a new controller inits it can check the registry of fired events.
+        //       so... MiscUtils.$broadcast would add "$tmTranQueryUpdated" to registry of events.
+        //       new controller would check MiscUtils.firedEvents["$tmTranQueryUpdated"] and
+        //       immediately fire the event (call the callback function) if the event has
+        //       already fired.
         var tranQuery = buildTranQueryForAccountTypes( $scope.accountTypes );
         MiscUtils.$broadcast( "$tmTranQueryUpdated", tranQuery);
     };
@@ -199,13 +241,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
     /**
      * Fetch account data for the given accountid.
+     * $tmAccountsLoaded event is emitted by Datastore.
      */
     var onAccountsLoaded = function(theEvent, accounts) {
         logger.fine("onAccountsLoaded: entry");
         setAccounts(accounts);
     };
 
-    $scope.$on( "$tmAccountsLoaded", onAccountsLoaded) ;
+    MiscUtils.$on( $scope, "$tmAccountsLoaded", onAccountsLoaded) ;
 
     /**
      * Listen for location changes
@@ -423,16 +466,28 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     };
 
     /**
+     * For detecting duplicate events.
+     */
+    var DupEventChecker = MiscUtils.getDupEventChecker( logger );
+
+    /**
      * Fetch account data for the given accountid.
+     * $tmAccountIdSelected event is emitted by AccountPageController
      */
     var onAccountIdSelected = function(theEvent, accountId) {
         logger.fine("onAccountIdSelected: accountId=" + accountId);
+
+        // Check for dup event.
+        if ( DupEventChecker.isDupEvent(accountId) ) {
+            return;
+        }
+
         $scope.isThinking = true;
         Datastore.fetchAccount( accountId )
                  .then( setAccount );
     };
 
-    $scope.$on( "$tmAccountIdSelected", onAccountIdSelected ) ;
+    MiscUtils.$on( $scope, "$tmAccountIdSelected", onAccountIdSelected ) ;
 
     /**
      * Export
@@ -447,10 +502,10 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 /**
  * For the account balance time series chart.
  */
-.controller( "AccountTimeSeriesChartController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "ChartUtils", 
-                                           function( $scope,   _ ,  Logger,   DateUtils,   Datastore,   ChartUtils ) {
+.controller( "AccountTimeSeriesChartController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "ChartUtils", "MiscUtils", 
+                                           function( $scope,   _ ,  Logger,   DateUtils,   Datastore,   ChartUtils,   MiscUtils ) {
 
-    var logger = Logger.getLogger("AccountTimeSeriesChartController", {all:false});
+    var logger = Logger.getLogger("AccountTimeSeriesChartController", {info:false});
     logger.info("alive!");
 
     /**
@@ -549,17 +604,28 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     };
 
     /**
+     * For detecting duplicate events.
+     */
+    var DupEventChecker = MiscUtils.getDupEventChecker( logger );
+
+    /**
      * Fetch timeseries data for the given accountId
      */
     var onAccountIdSelected = function(theEvent, accountId) {
-        logger.fine("onAccountIdSelected: accountId=" + accountId);
+        logger.info("onAccountIdSelected: accountId=" + accountId);
+
+        // Check for dup event.
+        if ( DupEventChecker.isDupEvent(accountId) ) {
+            return;
+        }
+
         $scope.isChartThinking = true;
         Datastore.fetchAccountTimeSeries( accountId )
              .then( setAccountTimeSeries ) 
              .then( renderChart );
     };
 
-    $scope.$on( "$tmAccountIdSelected", onAccountIdSelected ) ;
+    MiscUtils.$on( $scope, "$tmAccountIdSelected", onAccountIdSelected ) ;
     $scope.isChartThinking = true;
 
 }])
@@ -567,8 +633,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 /**
  * Controller for account.html.
  */
-.controller( "AccountPageController", ["$scope", "$location", "Logger", "$timeout", "Datastore", 
-                              function( $scope,   $location,   Logger,   $timeout,   Datastore) {
+.controller( "AccountPageController", ["$scope", "$location", "Logger", "$timeout", "Datastore", "MiscUtils", 
+                              function( $scope,   $location,   Logger,   $timeout,   Datastore,   MiscUtils) {
 
     var logger = Logger.getLogger("AccountPageController", {all:false});
 
@@ -581,13 +647,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         return $location.search().accountId || 0;
     }
 
-    // Broadcast event for sub-controllers
-    // Need to queue it up via $timeout due to scope life-cycle issues.
-    // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
-    $timeout(function() {
-                 logger.fine("broadcast $tmAccountIdSelected accountId=" + parseAccountIdFromLocation() );
-                 $scope.$broadcast( "$tmAccountIdSelected", parseAccountIdFromLocation() );
-             }, 1);
+    MiscUtils.$broadcast( "$tmAccountIdSelected", parseAccountIdFromLocation() );
+    // -rx- // Broadcast event for sub-controllers
+    // -rx- // Need to queue it up via $timeout due to scope life-cycle issues.
+    // -rx- // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
+    // -rx- $timeout(function() {
+    // -rx-              logger.fine("broadcast $tmAccountIdSelected accountId=" + parseAccountIdFromLocation() );
+    // -rx-              $scope.$broadcast( "$tmAccountIdSelected", parseAccountIdFromLocation() );
+    // -rx-          }, 1);
 
     // Populate tags for auto-fill.
     Datastore.fetchTags()
@@ -682,7 +749,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         $scope.selectedSavedQuery = savedQuery
     };
 
-    $scope.$on("$tmLoadSavedQuery", onLoadSavedQuery);
+    MiscUtils.$on($scope, "$tmLoadSavedQuery", onLoadSavedQuery);
 
     /**
      * @return the set of savedQueries whose name begins with the searchText.
@@ -718,8 +785,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 /**
  * Controller for rendering the tran chart
  */
-.controller( "TranChartController", ["$scope", "_",  "Logger", "DateUtils", "Datastore", "ChartUtils", "TranQueryBuilder",
-                            function( $scope,   _ ,   Logger,   DateUtils,   Datastore,   ChartUtils,   TranQueryBuilder) {
+.controller( "TranChartController", ["$scope", "_",  "Logger", "DateUtils", "Datastore", "ChartUtils", "TranQueryBuilder", "MiscUtils", 
+                            function( $scope,   _ ,   Logger,   DateUtils,   Datastore,   ChartUtils,   TranQueryBuilder,   MiscUtils) {
 
     var logger = Logger.getLogger("TranChartController", { info: false} );
     logger.info("alive!");
@@ -730,10 +797,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     var tranChart = null;
     var tranCanvasElement = document.getElementById("tm-tran-canvas-element");
 
-    /**
-     * Remember current query to avoid reloading the same data if a dup event gets broadcast.
-     */
-    var currentQuery = null;
 
     /**
      * Render the tran bar chart.
@@ -1020,6 +1083,11 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     };
 
     /**
+     * Remember current query to avoid reloading the same data if a dup event gets broadcast.
+     */
+    var currentQuery = null;
+
+    /**
      * Fetch tran data needed for chart according to the given query
      */
     var onTranQueryUpdated = function(theEvent, query) {
@@ -1040,7 +1108,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
                  .then( renderChart );
     };
 
-    $scope.$on( "$tmTranQueryUpdated", onTranQueryUpdated ) ;
+    MiscUtils.$on( $scope, "$tmTranQueryUpdated", onTranQueryUpdated ) ;
 
     /**
      * Event hanlder for "$tmLoadSavedQuery" event.
@@ -1052,7 +1120,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         onTranQueryUpdated( theEvent, savedQuery.query );
     };
 
-    $scope.$on("$tmLoadSavedQuery", onLoadSavedQuery);
+    MiscUtils.$on( $scope, "$tmLoadSavedQuery", onLoadSavedQuery);
 
     /**
      * Fetch transactions for the given account.
@@ -1063,7 +1131,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         onTranQueryUpdated(theEvent, query);
     };
 
-    $scope.$on( "$tmAccountLoaded", onAccountLoaded) ;
+    MiscUtils.$on( $scope, "$tmAccountLoaded", onAccountLoaded) ;
 
     /**
      * Export to scope.
@@ -1081,7 +1149,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 .controller( "TranListController", ["$scope", "_", "Logger", "Datastore", "MiscUtils", "TranQueryBuilder", 
                            function( $scope,   _ ,  Logger,   Datastore,   MiscUtils,   TranQueryBuilder ) {
 
-    var logger = Logger.getLogger("TranListController", { all: false } );
+    var logger = Logger.getLogger("TranListController", { info: false} );
     logger.info("alive!");
 
     /**
@@ -1217,7 +1285,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
                  .then( setTrans );
     };
 
-    $scope.$on( "$tmTranQueryUpdated", onTranQueryUpdated ) ;
+    MiscUtils.$on( $scope, "$tmTranQueryUpdated", onTranQueryUpdated ) ;
 
     /**
      * Event hanlder for "$tmLoadSavedQuery" event.
@@ -1229,7 +1297,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         onTranQueryUpdated( theEvent, savedQuery.query );
     };
 
-    $scope.$on("$tmLoadSavedQuery", onLoadSavedQuery);
+    MiscUtils.$on($scope, "$tmLoadSavedQuery", onLoadSavedQuery);
 
     /**
      * Fetch transactions for the given account.
@@ -1240,7 +1308,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         onTranQueryUpdated(null, query);
     };
 
-    $scope.$on( "$tmAccountLoaded", onAccountLoaded) ;
+    MiscUtils.$on( $scope, "$tmAccountLoaded", onAccountLoaded) ;
 
     /**
      * Export to scope
@@ -1272,24 +1340,29 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
      * Fetch all trans.
      */
     var loadAllTrans = function() {
-        // broadcast update for other controllers.
-        // Need to queue it up via $timeout due to scope life-cycle issues.
-        // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
-        var query = {};
-        $timeout(function() {
-                     logger.fine("loadAllTrans: broadcast $tmTranQueryUpdated query=" + JSON.stringify(query) );
-                     $rootScope.$broadcast( "$tmTranQueryUpdated", query ) ;
-                 }, 1);
+        MiscUtils.$broadcast( "$tmTranQueryUpdated", {} ) ;
+        // -rx- // broadcast update for other controllers.
+        // -rx- // Need to queue it up via $timeout due to scope life-cycle issues.
+        // -rx- // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
+        // -rx- var query = {};
+        // -rx- $timeout(function() {
+        // -rx-              logger.fine("loadAllTrans: broadcast $tmTranQueryUpdated query=" + JSON.stringify(query) );
+        // -rx-              $rootScope.$broadcast( "$tmTranQueryUpdated", query ) ;
+        // -rx-          }, 1);
     };
 
     /**
      * Executes when the page loads.
      * Check $location for savedQuery, otherwise load all trans.
      *
-     * TODO: this is causing the trans to be loaded twice, because the 
+     * Note: this is causing the trans to be loaded twice, because the 
      *       $tmLoadSavedQuery event is being emitted twice:
      *       1. here
-     *       2. in SaveQueryFormController, when selectedSavedQuery is updated.
+     *       2. in SaveQueryFormController, when selectedSavedQuery is updated (onChangeSavedQuery)
+     *       
+     *       The listeners for $tmLoadSavedQuery handle the dup event by keeping
+     *       track of the currentQuery and comparing it to the new query and only updating
+     *       the view if the queries differ.
      *      
      */
     var onLoad = function() {
@@ -1340,13 +1413,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         logger.fine("onQueryFormSubmit: entry");
         $scope.postData.query = TranQueryBuilder.buildQuery($scope);
 
-        // broadcast update for other controllers.
-        // Need to queue it up via $timeout due to scope life-cycle issues.
-        // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
-        $timeout(function() {
-                     logger.fine("reloadTrans: broadcast $tmTranQueryUpdated query=" + JSON.stringify($scope.postData.query) );
-                     $rootScope.$broadcast( "$tmTranQueryUpdated", $scope.postData.query ) ;
-                 }, 1);
+        // -rx- // broadcast update for other controllers.
+        // -rx- // Need to queue it up via $timeout due to scope life-cycle issues.
+        // -rx- // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
+        // -rx- // -rx- $timeout(function() {
+        // -rx-              logger.fine("reloadTrans: broadcast $tmTranQueryUpdated query=" + JSON.stringify($scope.postData.query) );
+        // -rx-              $rootScope.$broadcast( "$tmTranQueryUpdated", $scope.postData.query ) ;
+        // -rx-          }, 1);
+        MiscUtils.$broadcast( "$tmTranQueryUpdated", $scope.postData.query ) ;
     };
 
     /**
@@ -1432,7 +1506,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         // parse the query and fill in the form with the query parms
         $scope = _.extend( $scope, TranQueryBuilder.parseQuery( savedQuery.query ) );
 
-
         logger.fine("onLoadSavedQuery: after parse: " 
                             + "$scope.startDate=" + $scope.startDate
                             + ", $scope.endDate=" + $scope.endDate
@@ -1440,7 +1513,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
                             + ", $scope.tagsExcludeFilter=" + JSON.stringify($scope.tagsExcludeFilter) );
     };
 
-    $scope.$on("$tmLoadSavedQuery", onLoadSavedQuery);
+    MiscUtils.$on($scope, "$tmLoadSavedQuery", onLoadSavedQuery);
 
     /**
      * Listens for $addTranTag events.
