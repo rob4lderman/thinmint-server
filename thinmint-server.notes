@@ -1,6 +1,28 @@
 
+TODO: allow new accounts
+      1. rename existing collections: db.coll.renameCollection().  /tm/{user-id}/{accounts,accountsTimeSeries,transactions,tags,savedqueries}, 
+                                                                   /tm/users, 
+                                                                   /tm/counters
+db['tm-users'].renameCollection("/tm/users")
+db.accounts.renameCollection("/tm/ilana.bram@gmail.com/accounts")
+db.accountsTimeSeries.renameCollection("/tm/ilana.bram@gmail.com/accountsTimeSeries")
+db.transactions.renameCollection("/tm/ilana.bram@gmail.com/transactions")
+db.savedqueries.renameCollection("/tm/ilana.bram@gmail.com/savedqueries")
+db.tags.renameCollection("/tm/ilana.bram@gmail.com/tags")
 
-TODO: password encryption
+      2. update all the code.
+      
+
+TODO: backfill time-series during batch update
+      - normally it'll just overwrite what's already there
+      - if historic tran data was updated, it'll update the time series properly
+      - if account is new, it'll backfill its time-series
+
+TODO: guest user with sample data
+TODO: when adding new user, need to create indexes:
+      db.transactions.createIndex( { timestamp: -1 } )
+      db.transactions.createIndex( { account: 1, fi: 1 } )
+
 
 TODO: include trxType=0|1 in tran query form.
 
@@ -16,7 +38,8 @@ TODO: account "nickname" - display in trans
 
 TODO: tran "memo" or "notes" field - could display in Merchant field.
 
-TODO: mintclient.py: check if mint tran is any different from thinmint tran before doing upsert (perf)
+DONE: mintclient.py: check if mint tran is any different from thinmint tran before doing upsert (perf).
+      not possible.  because thinmint tran is *always* different - cuz mintMarker is always reset to 0.
 
 TODO: add paging to "new Transactions"
 
@@ -52,17 +75,6 @@ done: match up pending trans with completed trans
             remove pendingTran 
 
 
-done: add indexes for timestamp, account, fi
-      db.transactions.createIndex( { timestamp: -1 } )
-      db.transactions.createIndex( { account: 1, fi: 1 } )
-      db.transactions.update( {}, { "$unset": { "isResolved": "" } }, { "multi": true} )
-      ./mintclient.py import
-      ./mintclient.py resolve
-
-        
-done: all investments trans have txnType=1, everything else txnType=0
-      technically this is "income" too... 
-      autotag! "investment"
 
 
 ===================================================================================================
@@ -109,6 +121,14 @@ Exporting/Importing to mongolab:
 
 C:\easy\mysandbox\thinmint-server>C:\\mongodb-2.6.11\\bin\\mongodump -h localhost:27017 -d thinmint -o mongo.thinmint.dump
 C:\\mongodb-2.6.11\\bin\\mongorestore -h {mongolab-server} -d {db} -u <user> -p <password> mongo.thinmint.dump\thinmint
+
+done: add indexes for timestamp, account, fi
+      db.transactions.createIndex( { timestamp: -1 } )
+      db.transactions.createIndex( { account: 1, fi: 1 } )
+      db.transactions.update( {}, { "$unset": { "isResolved": "" } }, { "multi": true} )
+      ./mintclient.py import
+      ./mintclient.py resolve
+
 
 
 ===================================================================================================
