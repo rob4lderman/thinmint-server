@@ -1,15 +1,12 @@
 
-TODO: allow new accounts
-      1. rename existing collections: db.coll.renameCollection().  /tm/{user-id}/{accounts,accountsTimeSeries,transactions,tags,savedqueries}, 
-                                                                   /tm/users, 
-                                                                   /tm/counters
-db['tm-users'].renameCollection("/tm/users")
-db.accounts.renameCollection("/tm/ilana.bram@gmail.com/accounts")
-db.accountsTimeSeries.renameCollection("/tm/ilana.bram@gmail.com/accountsTimeSeries")
-db.transactions.renameCollection("/tm/ilana.bram@gmail.com/transactions")
-db.savedqueries.renameCollection("/tm/ilana.bram@gmail.com/savedqueries")
-db.tags.renameCollection("/tm/ilana.bram@gmail.com/tags")
-
+done: allow new accounts
+      1. rename existing collections: 
+         db['tm-users'].renameCollection("/tm/users")
+         db.accounts.renameCollection("/tm/ilana.bram@gmail.com/accounts")
+         db.accountsTimeSeries.renameCollection("/tm/ilana.bram@gmail.com/accountsTimeSeries")
+         db.transactions.renameCollection("/tm/ilana.bram@gmail.com/transactions")
+         db.savedqueries.renameCollection("/tm/ilana.bram@gmail.com/savedqueries")
+         db.tags.renameCollection("/tm/ilana.bram@gmail.com/tags")
       2. update all the code.
       
 

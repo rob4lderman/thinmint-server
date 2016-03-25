@@ -136,6 +136,19 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     };
 
     /**
+     * @return the internal accountId that represents the given accountTypes group.
+     */
+    var getAccountIdForAccountTypes = function(accountTypes) {
+        if ( $scope.accountTypes == "Cash" ) {
+            return -2;
+        } else if ( $scope.accountTypes == "Investment" ) {
+            return -3;
+        } else {
+            return -1; // net worth (all accounts)
+        }
+    }
+
+    /**
      * @return the appropriate accountType query based on the given accountTypes
      */
     var buildAccountsQueryForAccountTypes = function(accountTypes) {
@@ -185,7 +198,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         Datastore.queryAccounts( { query: query, options: options } );
 
         // Broadcast the $tmTranQueryUpdated event 
-        // TODO: even with the timeout this event is still being fired before
+        // Note: even with the timeout this event is still being fired before
         //       other controllers have loaded (e.g. TranListController, which is
         //       loaded from a partial, so loaded in a different run cycle), so they
         //       don't see the event and therefore don't load the appropriate data.
@@ -198,6 +211,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         //       already fired.
         var tranQuery = buildTranQueryForAccountTypes( $scope.accountTypes );
         MiscUtils.$broadcast( "$tmTranQueryUpdated", tranQuery);
+
+        // Broadcast, for the AccountTimeSeriesChartController.
+        MiscUtils.$broadcast( "$tmAccountIdSelected", getAccountIdForAccountTypes( $scope.accountTypes ) );
     };
 
     /**
@@ -240,7 +256,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     };
 
     /**
-     * Fetch account data for the given accountid.
      * $tmAccountsLoaded event is emitted by Datastore.
      */
     var onAccountsLoaded = function(theEvent, accounts) {
@@ -501,18 +516,20 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
 /**
  * For the account balance time series chart.
+ *
+ * Listens for $tmAccountIdSelected event.
  */
 .controller( "AccountTimeSeriesChartController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "ChartUtils", "MiscUtils", 
                                            function( $scope,   _ ,  Logger,   DateUtils,   Datastore,   ChartUtils,   MiscUtils ) {
 
-    var logger = Logger.getLogger("AccountTimeSeriesChartController", {info:false});
+    var logger = Logger.getLogger("AccountTimeSeriesChartController", {info:true});
     logger.info("alive!");
 
     /**
      * Remember theChart so we can clear its data when the data is updated.
      * TODO: chart rendering shoudl be done in directive? (since it access the DOM)
      */
-    var chartCanvasElement = document.getElementById("valueChart");
+    var chartCanvasElement = document.getElementById("tm-account-time-series-chart");
     var theChart = null;
 
     /**
@@ -600,6 +617,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     var setAccountTimeSeries = function(accountTimeSeries) {
         $scope.accountTimeSeries = accountTimeSeries;
         $scope.isChartThinking = false;
+        $scope.chartTitle = (accountTimeSeries.length > 0) ? accountTimeSeries[0].accountName : "Account Balance";
         return accountTimeSeries;
     };
 
@@ -610,6 +628,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
     /**
      * Fetch timeseries data for the given accountId
+     * $tmAccountIdSelected emitted by AccountPageController and AccountsPageController.
      */
     var onAccountIdSelected = function(theEvent, accountId) {
         logger.info("onAccountIdSelected: accountId=" + accountId);
@@ -627,6 +646,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
     MiscUtils.$on( $scope, "$tmAccountIdSelected", onAccountIdSelected ) ;
     $scope.isChartThinking = true;
+
 
 }])
 
@@ -648,13 +668,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     }
 
     MiscUtils.$broadcast( "$tmAccountIdSelected", parseAccountIdFromLocation() );
-    // -rx- // Broadcast event for sub-controllers
-    // -rx- // Need to queue it up via $timeout due to scope life-cycle issues.
-    // -rx- // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
-    // -rx- $timeout(function() {
-    // -rx-              logger.fine("broadcast $tmAccountIdSelected accountId=" + parseAccountIdFromLocation() );
-    // -rx-              $scope.$broadcast( "$tmAccountIdSelected", parseAccountIdFromLocation() );
-    // -rx-          }, 1);
 
     // Populate tags for auto-fill.
     Datastore.fetchTags()
@@ -1341,14 +1354,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
      */
     var loadAllTrans = function() {
         MiscUtils.$broadcast( "$tmTranQueryUpdated", {} ) ;
-        // -rx- // broadcast update for other controllers.
-        // -rx- // Need to queue it up via $timeout due to scope life-cycle issues.
-        // -rx- // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
-        // -rx- var query = {};
-        // -rx- $timeout(function() {
-        // -rx-              logger.fine("loadAllTrans: broadcast $tmTranQueryUpdated query=" + JSON.stringify(query) );
-        // -rx-              $rootScope.$broadcast( "$tmTranQueryUpdated", query ) ;
-        // -rx-          }, 1);
     };
 
     /**
@@ -1413,13 +1418,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         logger.fine("onQueryFormSubmit: entry");
         $scope.postData.query = TranQueryBuilder.buildQuery($scope);
 
-        // -rx- // broadcast update for other controllers.
-        // -rx- // Need to queue it up via $timeout due to scope life-cycle issues.
-        // -rx- // http://stackoverflow.com/questions/15676072/angularjs-broadcast-not-working-on-first-controller-load
-        // -rx- // -rx- $timeout(function() {
-        // -rx-              logger.fine("reloadTrans: broadcast $tmTranQueryUpdated query=" + JSON.stringify($scope.postData.query) );
-        // -rx-              $rootScope.$broadcast( "$tmTranQueryUpdated", $scope.postData.query ) ;
-        // -rx-          }, 1);
         MiscUtils.$broadcast( "$tmTranQueryUpdated", $scope.postData.query ) ;
     };
 

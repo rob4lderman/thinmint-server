@@ -1,0 +1,11 @@
+<!-- time series chart -->
+<div class="tm-portal" ng-controller="AccountTimeSeriesChartController">
+    <h3>Time Series: {{chartTitle}} </h3>
+    <div class="text-center">
+        <div class="tm-tran-canvas-thinking" > 
+            <img src="icons/thinking.gif" ng-if="isChartThinking"/>
+        </div>
+        <canvas id="tm-account-time-series-chart" width="1000" height="350"></canvas>
+    </div>
+</div>
+
