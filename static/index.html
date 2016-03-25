@@ -54,88 +54,95 @@
 
     <div class="container">
 
-        <div class="tm-portal" ng-controller="NewTransController">
-            <h3>New Transactions <small>(awaiting your <b>ack</b>-nowledgement)</small></h3>
-            <table class="table table-condensed table-hover tm-tran-table" ng-if="!isThinking">
-                <tr ng-include="'templates/new-tran-th.html'"></tr>
-                <tr ng-repeat="tran in newTrans" ng-include="'templates/new-tran-tr.html'"></tr>
+        <div class="row">
+            <div class="tm-portal" ng-controller="NewTransController">
+                <h3>New Transactions <small>(awaiting your <b>ack</b>-nowledgement)</small></h3>
+                <table class="table table-condensed table-hover tm-tran-table" ng-if="!isThinking">
+                    <tr ng-include="'templates/new-tran-th.html'"></tr>
+                    <tr ng-repeat="tran in newTrans" ng-include="'templates/new-tran-tr.html'"></tr>
 
-                <tr class="tm-list-totals">
-                    <th></th>
-                    <th class="text-right" tm-is-debit="{{ sumField(newTrans, 'amountValue') < 0 }}" >{{sumField(newTrans, 'amountValue') | currency}}</th>
-                    <th></th>    <!-- pending -->
-                    <th>Total</th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                </tr>
+                    <tr class="tm-list-totals">
+                        <th></th>
+                        <th class="text-right" tm-is-debit="{{ sumField(newTrans, 'amountValue') < 0 }}" >{{sumField(newTrans, 'amountValue') | currency}}</th>
+                        <th></th>    <!-- pending -->
+                        <th>Total</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
 
-            </table>
-            <div>
-                <img src="icons/thinking.gif" ng-if="isThinking"/>
+                </table>
+                <div>
+                    <img src="icons/thinking.gif" ng-if="isThinking"/>
+                </div>
             </div>
         </div>
 
         <div ng-controller="AccountSummaryController">
-            <div class="tm-portal tm-account-list">
-                <h3>Bank &amp; Credit Accounts</h3>
-                <table class="table table-condensed table-hover">
-                    <tr ng-include="'templates/account-th.html'"></tr>
-                    <tr ng-repeat="account in bankAndCreditAccounts" ng-include="'templates/account-tr.html'"></tr>
+            
+            <div class="row">
+                <div class="tm-portal tm-account-list">
+                    <h3>Bank &amp; Credit Accounts</h3>
+                    <table class="table table-condensed table-hover">
+                        <tr ng-include="'templates/account-th.html'"></tr>
+                        <tr ng-repeat="account in bankAndCreditAccounts" ng-include="'templates/account-tr.html'"></tr>
 
-                    <tr class="tm-account-list-total">
-                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["value"] < 0 }}'>{{ bankAndCreditAccountsSums["value"] | currency }}</th>
-                        <th>Total</th>
-                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last7days"] < 0 }}'>{{ bankAndCreditAccountsSums["last7days"] | currency:"$":0 }}</th>
-                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last30days"] < 0 }}'>{{ bankAndCreditAccountsSums["last30days"] | currency:"$":0 }}</th>
-                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last90days"] < 0 }}'>{{ bankAndCreditAccountsSums["last90days"] | currency:"$":0 }}</th>
-                        <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last365days"] < 0 }}'>{{ bankAndCreditAccountsSums["last365days"] | currency:"$":0 }}</th>
-                        <th></th>
-                    </tr>
-                </table>
-                <div class="text-center">
-                    <img src="icons/thinking.gif" ng-if="isThinking"/>
+                        <tr class="tm-account-list-total">
+                            <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["value"] < 0 }}'>{{ bankAndCreditAccountsSums["value"] | currency }}</th>
+                            <th>Total</th>
+                            <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last7days"] < 0 }}'>{{ bankAndCreditAccountsSums["last7days"] | currency:"$":0 }}</th>
+                            <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last30days"] < 0 }}'>{{ bankAndCreditAccountsSums["last30days"] | currency:"$":0 }}</th>
+                            <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last90days"] < 0 }}'>{{ bankAndCreditAccountsSums["last90days"] | currency:"$":0 }}</th>
+                            <th class="text-right" tm-is-debit='{{ bankAndCreditAccountsSums["last365days"] < 0 }}'>{{ bankAndCreditAccountsSums["last365days"] | currency:"$":0 }}</th>
+                            <th></th>
+                        </tr>
+                    </table>
+                    <div class="text-center">
+                        <img src="icons/thinking.gif" ng-if="isThinking"/>
+                    </div>
                 </div>
             </div>
 
-            <div class="tm-portal tm-account-list">
-                <h3>Investment &amp; Other Accounts</h3>
-                <table class="table table-condensed table-hover">
-                    <tr ng-include="'templates/account-th.html'"></tr>
-                    <tr ng-repeat="account in investmentAccounts" ng-include="'templates/account-tr.html'"></tr>
+            <div class="row">
+                <div class="tm-portal tm-account-list">
+                    <h3>Investment &amp; Other Accounts</h3>
+                    <table class="table table-condensed table-hover">
+                        <tr ng-include="'templates/account-th.html'"></tr>
+                        <tr ng-repeat="account in investmentAccounts" ng-include="'templates/account-tr.html'"></tr>
 
-                    <tr class="tm-account-list-total">
-                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["value"] < 0 }}'>{{ investmentAccountsSums["value"] | currency }}</th>
-                        <th>Total</th>
-                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last7days"] < 0 }}'>{{ investmentAccountsSums["last7days"] | currency:"$":0 }}</th>
-                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last30days"] < 0 }}'>{{ investmentAccountsSums["last30days"] | currency:"$":0 }}</th>
-                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last90days"] < 0 }}'>{{ investmentAccountsSums["last90days"] | currency:"$":0 }}</th>
-                        <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last365days"] < 0 }}'>{{ investmentAccountsSums["last365days"] | currency:"$":0 }}</th>
-                        <th></th>
-                    </tr>
+                        <tr class="tm-account-list-total">
+                            <th class="text-right" tm-is-debit='{{ investmentAccountsSums["value"] < 0 }}'>{{ investmentAccountsSums["value"] | currency }}</th>
+                            <th>Total</th>
+                            <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last7days"] < 0 }}'>{{ investmentAccountsSums["last7days"] | currency:"$":0 }}</th>
+                            <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last30days"] < 0 }}'>{{ investmentAccountsSums["last30days"] | currency:"$":0 }}</th>
+                            <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last90days"] < 0 }}'>{{ investmentAccountsSums["last90days"] | currency:"$":0 }}</th>
+                            <th class="text-right" tm-is-debit='{{ investmentAccountsSums["last365days"] < 0 }}'>{{ investmentAccountsSums["last365days"] | currency:"$":0 }}</th>
+                            <th></th>
+                        </tr>
 
-                    <tr>
-                        <td height="50px"> </td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
+                        <tr>
+                            <td height="50px"> </td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
 
-                    <tr class="tm-account-list-total">
-                        <th class="text-right" tm-is-debit='{{ getNetWorth() < 0 }}'>{{ getNetWorth() | currency }}</th>
-                        <th>Net worth</th>
-                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last7days" ) < 0 }}'>{{ getNetWorthPerf( "last7days" ) | currency:"$":0 }}</th>
-                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last30days" ) < 0 }}'>{{ getNetWorthPerf( "last30days" ) | currency:"$":0 }}</th>
-                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last90days" ) < 0 }}'>{{ getNetWorthPerf( "last90days" ) | currency:"$":0 }}</th>
-                        <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last365days" ) < 0 }}'>{{ getNetWorthPerf( "last365days" ) | currency:"$":0 }}</th>
-                        <th></th>
-                    </tr>
-                </table>
-                <div class="text-center">
-                    <img src="icons/thinking.gif" ng-if="isThinking"/>
+                        <tr class="tm-account-list-total">
+                            <th class="text-right" tm-is-debit='{{ getNetWorth() < 0 }}'>{{ getNetWorth() | currency }}</th>
+                            <th>Net worth</th>
+                            <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last7days" ) < 0 }}'>{{ getNetWorthPerf( "last7days" ) | currency:"$":0 }}</th>
+                            <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last30days" ) < 0 }}'>{{ getNetWorthPerf( "last30days" ) | currency:"$":0 }}</th>
+                            <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last90days" ) < 0 }}'>{{ getNetWorthPerf( "last90days" ) | currency:"$":0 }}</th>
+                            <th class="text-right" tm-is-debit='{{ getNetWorthPerf( "last365days" ) < 0 }}'>{{ getNetWorthPerf( "last365days" ) | currency:"$":0 }}</th>
+                            <th></th>
+                        </tr>
+                    </table>
+                    <div class="text-center">
+                        <img src="icons/thinking.gif" ng-if="isThinking"/>
+                    </div>
                 </div>
             </div>
         </div>
