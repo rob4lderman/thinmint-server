@@ -21,6 +21,18 @@ TODO: when adding new user, need to create indexes:
       db.transactions.createIndex( { account: 1, fi: 1 } )
 
 
+TODO: tag-by-month charts
+      allow user to create custom charts with combinations of tags
+      e.g: tags= income, bills + rent:  two datasets, 1 for income, 1 for (bills+rent)
+
+TODO: tag-by-month projections (based on tag-by-month trends)?
+
+done: "untagged" bars
+
+
+TODO: Datastore shouldn't emit events.  Callers should emit events.
+
+
 TODO: include trxType=0|1 in tran query form.
 
 TODO: trans page: don't immediately download ALL transactions. make the user ask for them (by clicking "Run" with an empty form).

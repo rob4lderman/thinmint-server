@@ -663,10 +663,10 @@ angular.module( "tmFactories", [] )
         logger.info("fetchTransCount: postData=" + JSON.stringify(postData) );
         return $http.post( "/query/transactions/count", postData )
                     .then( function success(response) {
-                               logger.fine( "fetchTrans: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "fetchTransCount: response=" + JSON.stringify(response,null,2));
                                return response.data[0];
                            }, function error(response) {
-                               logger.severe("fetchTrans: POST /query/transactions/count"
+                               logger.severe("fetchTransCount: POST /query/transactions/count"
                                                                     + ", postData=" + JSON.stringify(postData) 
                                                                     + ", response=" + JSON.stringify(response));
                            } );
@@ -761,6 +761,24 @@ angular.module( "tmFactories", [] )
     };
 
     /**
+     * @return promise that is satified with tagsByMonth records
+     */
+    var queryTagsByMonth = function( postData ) {
+        logger.info("queryTagsByMonth: postData=" + JSON.stringify(postData) );
+        return $http.post( "/query/tagsbymonth", postData )
+                    .then( function success(response) {
+                               logger.info( "queryTagsByMonth: response.length=" + response.data.length);
+                               logger.fine( "queryTagsByMonth: response=" + JSON.stringify(response,null,2));
+                               return response.data;
+                           }, function error(response) {
+                               logger.severe("queryTagsByMonth: POST /query/tagsByMonth"
+                                                                    + ", postData=" + JSON.stringify(postData) 
+                                                                    + ", response=" + JSON.stringify(response));
+                           } );
+
+    };
+
+    /**
      * export
      */
     return {
@@ -772,6 +790,7 @@ angular.module( "tmFactories", [] )
         fetchAccountTimeSeries: fetchAccountTimeSeries,
         fetchAccounts: fetchAccounts,
         fetchActiveAccounts: fetchActiveAccounts,
+        queryTagsByMonth: queryTagsByMonth,
         queryAccounts: queryAccounts,
         fetchNewTrans: fetchNewTrans,
         fetchSavedQueries: fetchSavedQueries,
@@ -935,7 +954,7 @@ angular.module( "tmFactories", [] )
 .factory( "ChartUtils", [ "Logger", 
                   function(Logger) {
 
-    var logger = Logger.getLogger("ChartUtils");
+    var logger = Logger.getLogger("ChartUtils", {all: false} );
 
     /**
      * @return a new array, same size as the given array, with at most num elements
@@ -984,7 +1003,7 @@ angular.module( "tmFactories", [] )
      *         if value < 0, barcolor=red; else barcolor=green
      */
     var createBarColors = function( values ) {
-        logger.info("ChartUtils.createBarColors: values.length=" + (values || []).length);
+        logger.info("createBarColors: values.length=" + (values || []).length);
         var barColors = new Array(values.length);
         for (var i=0; i < values.length; ++i) {
             if (values[i] < 0) {
@@ -999,13 +1018,77 @@ angular.module( "tmFactories", [] )
     /**
      * Set the bar colors of the given chart.
      */
-    var setBarColors = function(theChart, barColors) {
+    var setBarColors = function(theChart, chartDataset, barColors) {
         for (var i=0; i < barColors.length; ++i) {
-            theChart.datasets[0].bars[i].fillColor = barColors[i];
+            chartDataset.bars[i].fillColor = barColors[i];
         }
         theChart.update();
-        logger.info("ChartUtils.setBarColors: chart updated");
+        logger.info("setBarColors: chart updated");
     };
+
+    /**
+     * Set the bar colors of the given chart.
+     */
+    var setBarColorsForAllDatasets = function(theChart, chartData) {
+
+        for (var i=0; i < chartData.datasets.length; ++i) {
+            setBarColors( theChart, theChart.datasets[i], chartData.datasets[i].tm.barColors );
+        }
+
+        logger.info("setBarColorsForAllDatasets: chart updated");
+    };
+
+    /**
+     *
+     * Render the bar chart with the given data.
+     * Also sets bar colors (chartData.datasets[0].tm.barColors)
+     *
+     * @return the chart object.
+     */
+    var renderLineChartData = function( canvasElement, chartData ) {
+
+        // Get the context of the canvas element we want to select
+        return new Chart(canvasElement.getContext("2d"))
+                     .Line(chartData, { responsive: true });
+    };
+
+    /**
+     *
+     * Render the bar chart with the given data.
+     * Also sets bar colors (chartData.datasets[0].tm.barColors)
+     *
+     * @return the chart object.
+     */
+    var renderBarChartData = function( canvasElement, chartData ) {
+
+        // Get the context of the canvas element we want to select
+        var retMe = new Chart(canvasElement.getContext("2d"))
+                          .Bar(chartData, { responsive: true });
+
+        setBarColorsForAllDatasets(retMe, chartData);
+        return retMe;
+    };
+
+    /**
+     * Render the chart with the given data.
+     *
+     * @return the chart object.
+     */
+    var renderChartData = function( canvasElement, chartData ) {
+
+        logger.fine("renderChartData: canvasElement=" + canvasElement 
+                                    + ", chartData.tm=" + JSON.stringify(chartData.tm) );
+
+        if ( _.isUndefined( chartData.tm ) ) {
+            return renderBarChartData( canvasElement, chartData );
+        } else if ( chartData.tm.type == "Bar" ) {
+            return renderBarChartData( canvasElement, chartData );
+        } else if ( chartData.tm.type == "Line" ) {
+            return renderLineChartData( canvasElement, chartData );
+        }
+
+    };
+
 
     /**
      * Export
@@ -1015,7 +1098,9 @@ angular.module( "tmFactories", [] )
         sampleEveryNthAndReplace: sampleEveryNthAndReplace,
         sampleEveryNth: sampleEveryNth,
         createBarColors: createBarColors,
-        setBarColors: setBarColors
+        setBarColors: setBarColors,
+        setBarColorsForAllDatasets: setBarColorsForAllDatasets,
+        renderChartData: renderChartData
     };
 }])
 
@@ -1131,12 +1216,25 @@ angular.module( "tmFactories", [] )
         return retMe;
     };
 
+    /**
+     * @param yearMonth in the form "2016.01"
+     * @return a Date object representing the given yearMonth
+     */
+    var parseYearMonthString = function(yearMonth) {
+
+        var yearMonthInts = yearMonth.match(/(\d{4})[.](\d{2})/);
+        logger.fine("parseYearMonthString: yearMonth=" + yearMonth + ", yearMonthInts=" + JSON.stringify(yearMonthInts) );
+        
+        return new Date(yearMonthInts[1] + "/" + yearMonthInts[2] + "/01");
+    };
+        
 
     return {
         createDateLabels: createDateLabels,
         createMonthLabels: createMonthLabels,
         formatMonthLabel: formatMonthLabel,
         formatEpochAsDate: formatEpochAsDate,
+        parseYearMonthString: parseYearMonthString,
         dateDiff: dateDiff
     };
 }])
@@ -1283,6 +1381,104 @@ angular.module( "tmFactories", [] )
     }  
   }  
 }]) 
+
+
+
+/**
+ * 
+ * Usage:
+ * <canvas tm-chart-data="{chartDataModel}" />
+ *
+ * Listens for updates to {chartDataModel} and applies the chartData to the <canvas> element.
+ *
+ * ------------------------------------------------------------------------
+ * https://docs.angularjs.org/guide/directive
+ *
+ * $scope:
+ * By default a directive inherits the parent scope.
+ *
+ * Isolate scope:
+ * You can create an "isolate" scope for the directive.
+ * An isolate scope inherits NOTHING from the parent scope EXCEPT for the models you choose.
+ *
+ * return {
+ *     ...
+ *     scope: {
+ *       customerInfo: '=info'  // inherits model defined by the "info" attribute and assigns it to $scope.customerInfo.
+ *     }
+ * }
+ * 
+ *
+ *
+ */
+.directive('tmChartData', [ "_", "$parse", "Logger", "ChartUtils", 
+                    function(_,   $parse,   Logger,   ChartUtils) {
+
+    var logger = Logger.getLogger("tmChartData", {all: false} );
+    logger.info("alive!");
+
+    /**
+     * Called when the $watch listener fires.  The $watch listener listens
+     * for updates to the model defined in the ng-chart-data attribute.
+     *
+     * Attaches the chartData to the <canvas> element.
+     *
+     * @param element - jqLite-wrapped DOM element
+     * @param chartData - updated model
+     *
+     */
+    var renderChart = function(element, chartData) {
+        logger.info("renderChart: element=" + element 
+                             + ", chartData: " + JSON.stringify(chartData) );
+
+        if ( angular.isDefined( element.data( "tmChart" ) ) ) {
+            logger.fine("renderChart: clearing previous chart");
+            element.data( "tmChart" ).destroy();
+        }
+
+        if ( _.isEmpty(chartData) ) {
+            // nothing to do.
+            return;
+        }
+
+        // Cache the chart in the element so we can destroy it when chartData is updated.
+        element.data( "tmChart", ChartUtils.renderChartData( element[0], chartData ) );
+    };
+
+    
+    /**
+     * Sets up a $watch'er on the model defined in the "ng-chart-data" attribute.
+     *
+     * ----------------------------------------------------------------------------
+     * The linkFn is called when the $scope is ready to be linked up with the 
+     * compiled template.
+     *
+     * @param $scope the parent $scope, unless you specified an isolate scope, in which case it's the isolate scope.
+     * @param element jqLite-wrapped DOM element.  Use element[0] to get the raw DOM element.
+     * @param attrs attributes of the DOM element  
+     *
+     * @return nothing
+     */
+    var linkFn = function( $scope, element, attrs ) {
+
+        logger.info("linkFn: element=" + element);
+
+        if (element[0].tagName != "CANVAS") {
+            logger.server("linkFn: element is not CANVAS element, " + element);
+            return;
+        }
+
+        // Note: Upon registration, the watch listener is always called once (async'ly) to initialize the watched value.
+        $scope.$watch( attrs.tmChartData, _.partial( renderChart, element ) );
+    };
+
+    return {
+        link: linkFn
+    };
+}])
+
+
+
 
 ;
 

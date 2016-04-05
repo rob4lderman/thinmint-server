@@ -512,6 +512,33 @@ app.get('/savedqueries/:id',
 });
 
 
+/**
+ * REST API
+ *
+ * curl -X POST \
+ *   -d '{ "query": { "account": "SAVINGS" }, "options": { "fields": { "account": 1, "date": 1, "amount": 1, "category": 1, "omerchant": 1, "isDebit": 1 } } }' \
+ *   -H 'content-type:application/json'  \
+ *   http://localhost:8081/query/transactions
+ *
+ */
+app.post('/query/tagsbymonth', 
+         passport.authenticate('basic', { session: false }),
+         function (req, res) {
+    console.log("POST query/tagsbymonth: REQUEST: " + JSON.stringify(req.body))
+    var collection = getUserCollection(req, "tagsByMonth");
+    collection.find( req.body.query || {}, 
+                     req.body.options || {},
+                     function(err,docs){
+                         docs = docs || [];
+                         console.log("POST query/tagsbymonth: RESPONSE length: " + (docs || []).length
+                                                                      + ", err: " + JSON.stringify(err) );
+                         res.json(docs || []);
+                         }
+                   );
+});
+
+
+
 
 /**
  * app.listen initiates the server.

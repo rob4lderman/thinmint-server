@@ -28,6 +28,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
  *      Listener: SingleAccountSummaryController
  *      Listener: AccountTimeSeriesChartController
  *
+ * $tmTagsByMonthLoaded
+ *      Emitter: TagsPageController
+ *      Listener: TagsByMonthChartController
  *
  */
 
@@ -526,24 +529,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     logger.info("alive!");
 
     /**
-     * Remember theChart so we can clear its data when the data is updated.
-     * TODO: chart rendering shoudl be done in directive? (since it access the DOM)
-     */
-    var chartCanvasElement = document.getElementById("tm-account-time-series-chart");
-    var theChart = null;
-
-    /**
      * Render the current balance chart.
      */
     var renderChart = function( accountTimeSeries ) {
         logger.fine("renderChart: entry");
 
-        if (theChart != null) {
-            logger.fine("renderChart: clearing previous chart");
-            theChart.destroy();
-        }
-
         if (accountTimeSeries.length == 0) {
+            $scope.chartData = {};
             return;
         }
 
@@ -589,7 +581,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
                                + ", accountTimeSeries.length=" + accountTimeSeries.length);
 
         // Setup data frame.
-        var data = {
+        $scope.chartData = {
+            tm: { type: "Line" },
             labels: ChartUtils.sampleEvenlyAndReplace( ChartUtils.sampleEveryNth(labels, sampleRate), 10, "" ),
             datasets: [
                 {
@@ -604,10 +597,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
                 }
             ]
         };
-
-        // Get the context of the canvas element we want to select
-        theChart = new Chart(chartCanvasElement.getContext("2d"))
-                         .Line(data, { responsive: true });
     };
 
     /**
@@ -645,7 +634,12 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     };
 
     MiscUtils.$on( $scope, "$tmAccountIdSelected", onAccountIdSelected ) ;
+
+    /**
+     * Init and export.
+     */
     $scope.isChartThinking = true;
+    $scope.chartData = {};
 
 
 }])
@@ -805,22 +799,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     logger.info("alive!");
 
     /**
-     * Remember charts so we can clear them when the tran list is updated.
-     */
-    var tranChart = null;
-    var tranCanvasElement = document.getElementById("tm-tran-canvas-element");
-
-
-    /**
      * Render the tran bar chart.
      */
     var renderChartByDay = function( trans ) {
         logger.fine("renderChartByDay: entry ");
 
-        destroyTranChart( tranChart );
-
         // Safety check.
-        if ( trans.length == 0  || tranCanvasElement == null) {
+        if ( trans.length == 0 ) {
+            $scope.tranChartData = {};
             return;
         }
 
@@ -855,22 +841,13 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
         logger.fine("renderChartByDay: values=" + JSON.stringify(values));
 
-        renderChartWithThisData( ChartUtils.sampleEvenlyAndReplace( labels, 10, "" ),
-                                 values,
-                                 barColors );
+        // Step 6. update scope to pass data to the tmChartData directive.
+        $scope.tranChartData = buildChartData( ChartUtils.sampleEvenlyAndReplace( labels, 10, "" ),
+                                               values,
+                                               barColors );
 
         logger.fine("renderChartByDay: exit");
     };
-
-    /**
-     * calls tranChart.destroy
-     */
-    var destroyTranChart = function(tranChart) {
-        if (tranChart != null) {
-            logger.fine("destroyTranChart: clearing previous tran chart");
-            tranChart.destroy();
-        }
-    }
 
     /**
      * @return the timestamp from the earliest record. assumes the recors
@@ -889,12 +866,12 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     }
 
     /**
-     * Render the chart with the given data and bar colors.
+     * @return chartData object
      */
-    var renderChartWithThisData = function( labels, values, barColors ) {
+    var buildChartData = function( labels, values, barColors ) {
 
         // Setup data frame.
-        var data = {
+        return {
             labels: labels,
             datasets: [
                 {
@@ -903,19 +880,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
                     strokeColor: "rgba(220,220,220,1)",
                     highlightFill: "#fff",
                     highlightStroke: "rgba(220,220,220,1)",
-                    data: values
+                    data: values,
+                    tm: {
+                        barColors: barColors
+                    }
                 }
             ]
         };
-
-        // Get the context of the canvas element we want to select
-        // -rx- tranCanvasElement.setAttribute("height", "350");
-        tranChart = new Chart(tranCanvasElement.getContext("2d"))
-                                    .Bar(data, { responsive: true });
-
-        ChartUtils.setBarColors(tranChart, barColors);
-        logger.fine("renderChartWithThisData: exit");
-    }
+    };
 
     /**
      * Render the tran by month bar chart.
@@ -923,10 +895,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     var renderChartByMonth = function( trans ) {
         logger.fine("renderChartByMonth: entry ");
 
-        destroyTranChart(tranChart);
-
         // Safety check.
-        if ( trans.length == 0  || tranCanvasElement == null) {
+        if ( trans.length == 0 ) {
+            $scope.tranChartData = {};
             return;
         }
 
@@ -966,7 +937,10 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         logger.fine("renderChartByMonth: values=" + JSON.stringify(values));
         logger.fine("renderChartByMonth: absPluckValues=" + JSON.stringify(absPluckValues));
 
-        renderChartWithThisData( monthLabels, absPluckValues, barColors );
+        // Step 6. Set scope to trigger tmChartData directive.
+        $scope.tranChartData = buildChartData( monthLabels, 
+                                               absPluckValues,
+                                               barColors );
     };
 
     /**
@@ -977,10 +951,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         currentRenderChartFunction = renderChartByTags;
         logger.fine("renderChartByTags: entry");
 
-        destroyTranChart(tranChart);
-
         // Safety check.
-        if ( trans.length == 0  || tranCanvasElement == null) {
+        if ( trans.length == 0 ) {
+            $scope.tranChartData = {};
             return;
         }
 
@@ -1032,7 +1005,10 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         // Step 6. Create the actual values for the chart.
         tagAmountsArray = _.map( tagAmountsArray, function(tagAmount) { return Math.abs(tagAmount); } );   
 
-        renderChartWithThisData( tagLabels, tagAmountsArray, barColors );
+        // Step 7. Set scope to trigger tmChartData directive.
+        $scope.tranChartData = buildChartData( tagLabels, 
+                                               tagAmountsArray,
+                                               barColors );
     };
 
     /**
@@ -1152,6 +1128,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     $scope.isChartThinking = true;
     $scope.renderChartByTime = renderChartByTime;
     $scope.renderChartByTags = renderChartByTags;
+    $scope.tranChartData = {};
 
 }])
 
@@ -1544,6 +1521,367 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     $scope.MiscUtils = MiscUtils;
 
 }])
+
+
+/**
+ * Controller for tags.html
+ */
+.controller( "TagsPageController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "MiscUtils", "$location",
+                             function( $scope,   _,   Logger,   DateUtils,   Datastore,   MiscUtils,   $location ) {
+
+    var logger = Logger.getLogger("TagsPageController", { all: false});
+    logger.info("alive! $location.search=" + JSON.stringify($location.search()) );
+
+    /**
+     * @return the tags from the query string.
+     */
+    var parseTagsFromLocation = function() {
+        var retMe = $location.search().tags || [ "bills", "income" ] ;
+        logger.fine("parseTagsFromLocation: retMe=" + JSON.stringify(retMe));
+        return _.isArray(retMe) ? retMe : [ retMe ] ;
+    };
+
+    /**
+     * @return the appropriate accountType query based on the given accountTypes
+     */
+    var buildTransByTagByMonthQueryForTags = function(tags) {
+        var query = { "tag": { "$in": tags } } ;
+        return query;
+    };
+
+    /**
+     * Determine which tags to load based on query string.
+     */
+    var onLoad = function() {
+
+        var options = { "sort": { "yearMonth": 1 } };
+
+        $scope.byTags = parseTagsFromLocation();
+
+        var query = buildTransByTagByMonthQueryForTags( $scope.byTags );
+
+        // Datastore will broadcast the $tmAccountsLoaded event.
+        logger.fine("onLoad: queryTagsByMonth postData=" + JSON.stringify( { query: query, options: options } ));
+
+        // Note: Broadcasts the $tmTagsByMonthLoaded
+        Datastore.queryTagsByMonth( { query: query, options: options }, true )
+                 .then( _.partial( MiscUtils.$broadcast, "$tmTagsByMonthLoaded" ) );
+
+    };
+
+    /**
+     * Listen for location changes
+     * Note: the initial page load generates a $locationChangeSuccess event, which is
+     *       how we load the initial data.
+     */
+    var onLocationChangeSuccess = function(theEvent, currentLocation, previousLocation) {
+        logger.info("onLocationChangeSuccess: currentLocation=" + currentLocation
+                                            + ", previousLocation=" + previousLocation );
+        onLoad();
+    };
+
+    $scope.$on( "$locationChangeSuccess", onLocationChangeSuccess );
+
+    // Populate tags.
+    Datastore.fetchTags()
+             .then( function success(tags) { $scope.tags = tags; } ); 
+
+}])
+
+
+/**
+ * For the tags by month chart.
+ *
+ * Listens for $tmTagsByMonthLoaded
+ */
+.controller( "TagsByMonthChartController",   ["$scope", "_", "Logger", "DateUtils", "ChartUtils", "MiscUtils", 
+                                     function( $scope,   _ ,  Logger,   DateUtils,   ChartUtils,   MiscUtils ) {
+
+    var logger = Logger.getLogger("TagsByMonthChartController", {all:false});
+    logger.info("alive!");
+
+    /**
+     * TODO: this is duplicated 
+     *
+     * @param tagsByMonthList - tagsByMonth records.  expected to be for a single tag only.
+     *
+     * @return a chart dataset for the tagsByMonthList data 
+     */
+    var buildTagByMonthDataset = function( monthLabels, tagsByMonthList ) {
+
+        logger.fine("buildTagByMonthDataset: monthLabels=" + JSON.stringify(monthLabels)
+                                            + ", tagsByMonthList=" + JSON.stringify(tagsByMonthList) );
+
+        // Step 1. Initialize values array
+        // Initialize all values with monthLabel and value.
+        // There's a values[] entry for each monthLabel.
+        var values = new Array(monthLabels.length);
+        for (var i=0; i < values.length; ++i) {
+            values[i] = { monthLabel: monthLabels[i], value: 0 };
+        }
+
+        // Step 2. Map the tagsByMonth records into the values[] array
+        // by matching the monthLabel of the tagsByMonth record into the values[] array.
+        _.each( tagsByMonthList, 
+                function(tagByMonth) {
+                    var monthLabel = DateUtils.formatMonthLabel( DateUtils.parseYearMonthString( tagByMonth.yearMonth ) );  
+                    var value = _.findWhere( values, { monthLabel: monthLabel });   // Find the slot in the values[] array for this monthLabel
+                    value.value += tagByMonth.sumAmountValue;
+                } );
+
+        var pluckValues =  _.pluck( values, "value");
+
+        // Step 3. Create the positive/negative bar colors.
+        var barColors = ChartUtils.createBarColors( pluckValues );    // red and green bar colors
+
+        // Step 4. Create the actual values for the chart.
+        var absPluckValues = _.map( pluckValues, function(val) { return Math.abs(val); } );   // absolute values
+
+        logger.fine("buildTagByMonthDataset: monthLabels=" + JSON.stringify(monthLabels));
+        logger.fine("buildTagByMonthDataset: values=" + JSON.stringify(values));
+        logger.fine("buildTagByMonthDataset: absPluckValues=" + JSON.stringify(absPluckValues));
+
+        // Step 5. Build and return dataset.
+        return {
+                    label: tagsByMonthList[0].tag,
+                    fillColor: "rgba(220,220,220,0.2)",
+                    strokeColor: "rgba(220,220,220,1)",
+                    pointColor: "rgba(220,220,220,1)",
+                    pointStrokeColor: "#fff",
+                    pointHighlightFill: "#fff",
+                    pointHighlightStroke: "rgba(220,220,220,1)",
+                    data: absPluckValues,
+                    tm: { 
+                        barColors: barColors
+                    }
+                };
+    };
+
+
+    /**
+     * Render the tagsByMonth data .
+     *
+     * @param tagsByMonth, expected to be in chronological order ascending.
+     */
+    var renderChart = function( tagsByMonth ) {
+        logger.fine("renderChart: entry");
+
+        if (tagsByMonth.length == 0) {
+            $scope.chartData = {};
+            return;
+        }
+
+        // Step 1. Convert into labels
+        //         The # of labels also tells us how many values there will be
+        // Get all monthLabels from earliest record (first element) to today
+        var monthLabels = DateUtils.createMonthLabels( DateUtils.parseYearMonthString( tagsByMonth[0].yearMonth ),
+                                                       new Date() );     // today
+
+        // Step 2. Transmute tagsByMonth record list into tagsByMonth map, where the records
+        //         are sorted by tag.
+        //         tagsByMonthMap[tag] = [ tagsByMonthRecord, tagsByMonthRecord, ... ] ;
+        //
+        var tagsByMonthMap = _.reduce(tagsByMonth,
+                                      function(memo, tagByMonth) {
+                                          memo[tagByMonth.tag] = memo[tagByMonth.tag] || [];
+                                          memo[tagByMonth.tag].push( tagByMonth );
+                                          return memo;
+                                      },
+                                      {} );
+
+        // Step 3. Map records into datasets.
+        var tagsByMonthDatasets = _.map( _.values( tagsByMonthMap ), _.partial( buildTagByMonthDataset, monthLabels ) );
+
+        // Step 4. Setup chartData
+        $scope.chartTitle = "Tag(s): " + _.pluck( tagsByMonthDatasets, "label" ).join(", ");
+        // Setup data frame.
+        $scope.chartData = {
+            labels: monthLabels,
+            datasets: tagsByMonthDatasets
+        };
+    };
+
+    /**
+     * @param tagsByMonth records
+     * @return tagsByMonth
+     */
+    var setTagsByMonth = function(tagsByMonth) {
+        $scope.tagsByMonth = tagsByMonth;
+        $scope.isChartThinking = false;
+        return tagsByMonth;
+    };
+
+    /**
+     * For detecting duplicate events.
+     */
+    var DupEventChecker = MiscUtils.getDupEventChecker( logger );
+
+    /**
+     * Listener for $tmTagsByMonthLoaded events.
+     *
+     * Fetch timeseries data for the given accountId
+     * $tmAccountIdSelected emitted by AccountPageController and AccountsPageController.
+     */
+    var onTagsByMonthLoaded = function(theEvent, tagsByMonth) {
+        logger.info("onTagsByMonthLoaded: tagsByMonth=" + JSON.stringify(tagsByMonth));
+
+        // Check for dup event.
+        if ( DupEventChecker.isDupEvent(tagsByMonth) ) {
+            return;
+        }
+
+        setTagsByMonth( tagsByMonth );
+        renderChart( tagsByMonth );
+    };
+
+    MiscUtils.$on( $scope, "$tmTagsByMonthLoaded", onTagsByMonthLoaded ) ;
+
+    $scope.isChartThinking = true;
+    $scope.chartData = {};
+
+}])
+
+
+/**
+ * Tag-by-month chart controller for a single tag.
+ *
+ */
+.controller( "TagByMonthChartController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "ChartUtils", "MiscUtils", 
+                                    function( $scope,   _ ,  Logger,   DateUtils,   Datastore,   ChartUtils,   MiscUtils ) {
+
+    var logger = Logger.getLogger("TagByMonthChartController", {all:false});
+    logger.info("alive!");
+
+    /**
+     * @param tagsByMonthList - tagsByMonth records.  expected to be for a single tag only.
+     *
+     * @return a chart dataset for the tagsByMonthList data 
+     */
+    var buildTagByMonthDataset = function( monthLabels, tagsByMonthList ) {
+
+        logger.fine("buildTagByMonthDataset: monthLabels=" + JSON.stringify(monthLabels)
+                                            + ", tagsByMonthList=" + JSON.stringify(tagsByMonthList) );
+
+        // Step 1. Initialize values array
+        // Initialize all values with monthLabel and value.
+        // There's a values[] entry for each monthLabel.
+        var values = new Array(monthLabels.length);
+        for (var i=0; i < values.length; ++i) {
+            values[i] = { monthLabel: monthLabels[i], value: 0 };
+        }
+
+        // Step 2. Map the tagsByMonth records into the values[] array
+        // by matching the monthLabel of the tagsByMonth record into the values[] array.
+        _.each( tagsByMonthList, 
+                function(tagByMonth) {
+                    var monthLabel = DateUtils.formatMonthLabel( DateUtils.parseYearMonthString( tagByMonth.yearMonth ) );  
+                    var value = _.findWhere( values, { monthLabel: monthLabel });   // Find the slot in the values[] array for this monthLabel
+                    value.value += tagByMonth.sumAmountValue;
+                } );
+
+        var pluckValues =  _.pluck( values, "value");
+
+        // Step 3. Create the positive/negative bar colors.
+        var barColors = ChartUtils.createBarColors( pluckValues );    // red and green bar colors
+
+        // Step 4. Create the actual values for the chart.
+        var absPluckValues = _.map( pluckValues, function(val) { return Math.abs(val); } );   // absolute values
+
+        logger.fine("buildTagByMonthDataset: monthLabels=" + JSON.stringify(monthLabels));
+        logger.fine("buildTagByMonthDataset: values=" + JSON.stringify(values));
+        logger.fine("buildTagByMonthDataset: absPluckValues=" + JSON.stringify(absPluckValues));
+
+        // Step 5. Build and return dataset.
+        return {
+                    label: tagsByMonthList[0].tag,
+                    fillColor: "rgba(220,220,220,0.2)",
+                    strokeColor: "rgba(220,220,220,1)",
+                    pointColor: "rgba(220,220,220,1)",
+                    pointStrokeColor: "#fff",
+                    pointHighlightFill: "#fff",
+                    pointHighlightStroke: "rgba(220,220,220,1)",
+                    data: absPluckValues,
+                    tm: { 
+                        barColors: barColors
+                    }
+                };
+    };
+
+
+    /**
+     * Render the tagsByMonth data .
+     *
+     * @param tagByMonthList, expected to be in chronological order ascending.
+     */
+    var buildChartData = function( tagByMonthList ) {
+        logger.fine("buildChartData: entry");
+
+        if (tagByMonthList.length == 0) {
+            $scope.chartData = {};
+            return;
+        }
+
+        // Step 1. Convert into labels
+        //         The # of labels also tells us how many values there will be
+        // Get all monthLabels from earliest record (first element) to today
+        var monthLabels = DateUtils.createMonthLabels( DateUtils.parseYearMonthString( tagByMonthList[0].yearMonth ),
+                                                       new Date() );     // today
+
+        // Step 2. Map records into datasets.
+        var chartDataset = buildTagByMonthDataset( monthLabels, tagByMonthList );
+
+        // Step 3. Setup data frame.
+        $scope.chartData = {
+            labels: monthLabels,
+            datasets: [ chartDataset ]
+        };
+
+        logger.fine("buildChartData: $scope.chartData=" + JSON.stringify($scope.chartData) );
+    };
+
+    /**
+     * @param tagsByMonth records
+     * @return tagsByMonth
+     */
+    var setTagsByMonth = function(tagsByMonth) {
+        $scope.tagsByMonth = tagsByMonth;
+        $scope.isChartThinking = false;
+        return tagsByMonth;
+    };
+
+    /**
+     * Load the tag-by-month data for this tag.
+     */
+    var tagOnClick = function() {
+
+        $scope.isChartVisible = !$scope.isChartVisible;
+
+        logger.fine("tagOnClick: entry: tag=" + $scope.tag + ", isChartVisible=" + $scope.isChartVisible );
+        
+        if (!$scope.isChartVisible) {
+            // User has hidden the chart.  Nothing more to do here.
+            return;
+        }
+
+        var query = { "tag": $scope.tag } ;
+        var options = { "sort": { "yearMonth": 1 } };
+
+        // Fetch the tag-by-month data
+        Datastore.queryTagsByMonth( { query: query, options: options } )
+                 .then( setTagsByMonth )
+                 .then( buildChartData );
+    };
+
+    /**
+     * Export to scope.
+     */
+    $scope.isChartVisible = false;
+    $scope.chartData = {};
+    $scope.tagOnClick = tagOnClick;
+
+}])
+
+
 
 ;
 
