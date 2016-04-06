@@ -1,3 +1,4 @@
+
 angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
 /**
@@ -18,6 +19,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
  *      Listener: TranChartController
  *      Listener: TranListController
  *
+ * $tmAccountLoaded:
+ *      Listener: TranChartController
+ *      Listener: TranListController
  *
  * $tmAccountsLoaded
  *      Emitter: AccountsPageController.onLoad -> Datastore
@@ -32,10 +36,22 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
  *      Emitter: TagsPageController
  *      Listener: TagsByMonthChartController
  *
+ * $tmAddTranTag
+ *      Emitter: TagFormController
+ *      Listener: NewTransController
+ *      Listener: AccountPageController
+ *      Listener: AccountsPageController
+ *      Listener: TranPageController
+ *      Listener: TagsPageController
+ *
+ * $tmAckTran
+ *      Emitter: TranAckFormController
+ *      Listener: NewTransController
+ *
  */
 
 /**
- * TODO: separate controllers for subsets of accounts? then the summation html could be ng-included.
+ * Note: could separate controllers for subsets of accounts? then the summation html could be ng-included.
  *       http://stackoverflow.com/questions/13811948/different-ng-includes-on-the-same-page-how-to-send-different-variables-to-each
  *
  *       use ng-if trick:
@@ -196,9 +212,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
         var query = buildAccountsQueryForAccountTypes( $scope.accountTypes );
 
-        // Datastore will broadcast the $tmAccountsLoaded event.
         logger.fine("onLoad: queryAccounts postData=" + JSON.stringify( { query: query, options: options } ));
-        Datastore.queryAccounts( { query: query, options: options } );
+        Datastore.queryAccounts( { query: query, options: options } )
+                 .then( _.partial( MiscUtils.$broadcast, "$tmAccountsLoaded" ) );
 
         // Broadcast the $tmTranQueryUpdated event 
         // Note: even with the timeout this event is still being fired before
@@ -235,6 +251,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     // Populate tags for child controllers.
     Datastore.fetchTags()
              .then( function success(tags) { $scope.tags = tags; } ); 
+
+    // Listens for $tmAddTranTag events
+    MiscUtils.listenForAddTranTag($scope, logger);
 
 }])
 
@@ -302,30 +321,20 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 .controller( "NewTransController",   ["$scope", "_", "Logger", "Datastore", "MiscUtils",
                              function( $scope,   _,   Logger,   Datastore,   MiscUtils ) {
 
-    var logger = Logger.getLogger("NewTransController");
-    logger.info("NewTransController: alive!");
+    var logger = Logger.getLogger("NewTransController", {all: false});
+    logger.info("alive!");
 
     /**
      * Called when a tran is ACKed.   Remove the tran from the list.
      */
     var onAckTran = function(theEvent, tranId) {
 
-        logger.info("NewTransController.onAckTran: tranId=" + tranId);
+        logger.info("onAckTran: tranId=" + tranId);
 
         // remove it from the list locally (faster)
         $scope.newTrans = _.filter( $scope.newTrans, function(tran) { return tran._id != tranId } );
     };
 
-    /**
-     * Listens for $addTranTag events.
-     */
-    var onAddTranTag = function(theEvent, tag) {
-        logger.info("NewTransController.onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
-
-        if ( ! _.contains($scope.tags, tag) ) {
-            $scope.tags.push(tag);
-        }
-    };
 
     /**
      * Export to $scope
@@ -334,8 +343,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     $scope.sumField = MiscUtils.sumField;
     $scope.MiscUtils = MiscUtils;
 
-    $scope.$on("$addTranTag", onAddTranTag );
-    $scope.$on("$ackTran", onAckTran);
+    $scope.$on("$tmAckTran", onAckTran);
 
     $scope.isThinking = true;
 
@@ -351,6 +359,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     // Populate tags for auto-fill.
     Datastore.fetchTags()
              .then( function success(tags) { $scope.tags = tags; } ); 
+
+    // Listens for $tmAddTranTag events
+    MiscUtils.listenForAddTranTag($scope, logger);
 
 }])
 
@@ -396,8 +407,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
             // Refresh parent $scope.tags since we may have just added a brand new tag.
             // Safest way to do this is to via Event.
-            logger.info("TagFormController.addTranTag: $rootScope.$broadcast(event=$addTranTag, tag=" + tag + ")");
-            $rootScope.$broadcast("$addTranTag", tag);
+            logger.info("TagFormController.addTranTag: $rootScope.$broadcast(event=$tmAddTranTag, tag=" + tag + ")");
+            $rootScope.$broadcast("$tmAddTranTag", tag);
         }
     }
 
@@ -452,8 +463,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         var putData = { "hasBeenAcked": true } ;
         Datastore.putTran( tranId, putData );
 
-        logger.info("TranAckFormController.ackTran: $rootScope.$broadcast(event=$ackTran, tranId=" + tranId + ")");
-        $rootScope.$broadcast("$ackTran", tranId);
+        logger.info("TranAckFormController.ackTran: $rootScope.$broadcast(event=$tmAckTran, tranId=" + tranId + ")");
+        $rootScope.$broadcast("$tmAckTran", tranId);
     };
 
     /**
@@ -467,8 +478,8 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 /**
  * Show summary table for just a single account.
  */
-.controller( "SingleAccountSummaryController",   ["$scope", "Logger", "DateUtils", "Datastore", "MiscUtils",
-                                         function( $scope,   Logger,   DateUtils,   Datastore,   MiscUtils) {
+.controller( "SingleAccountSummaryController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "MiscUtils",
+                                         function( $scope,   _,   Logger,   DateUtils,   Datastore,   MiscUtils) {
 
     var logger = Logger.getLogger("SingleAccountSummaryController", {all:false});
     logger.info("alive!");
@@ -502,6 +513,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
         $scope.isThinking = true;
         Datastore.fetchAccount( accountId )
+                 .then( _.partial( MiscUtils.$broadcast, "$tmAccountLoaded" ) )
                  .then( setAccount );
     };
 
@@ -525,7 +537,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 .controller( "AccountTimeSeriesChartController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "ChartUtils", "MiscUtils", 
                                            function( $scope,   _ ,  Logger,   DateUtils,   Datastore,   ChartUtils,   MiscUtils ) {
 
-    var logger = Logger.getLogger("AccountTimeSeriesChartController", {info:true});
+    var logger = Logger.getLogger("AccountTimeSeriesChartController", {info:false});
     logger.info("alive!");
 
     /**
@@ -666,6 +678,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     // Populate tags for auto-fill.
     Datastore.fetchTags()
              .then( function success(tags) { $scope.tags = tags; } ); 
+
+    // Listens for $tmAddTranTag events
+    MiscUtils.listenForAddTranTag($scope, logger);
 
 }])
 
@@ -1320,7 +1335,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
  * Controller for trans.html
  */
 .controller( "TranPageController", ["$scope", "$location", "Logger",  "Datastore", "MiscUtils", "$rootScope", "$timeout",
-                           function( $scope,   $location,   Logger,   Datastore,   MiscUtils,   $rootScope,   $timeout) {
+                           function( $scope,   $location,   Logger,    Datastore,   MiscUtils,   $rootScope,   $timeout) {
 
     var logger = Logger.getLogger("TranPageController", { all: false } );
     logger.info("alive!");
@@ -1356,7 +1371,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
                      .then( function( savedQuery ) {
                                 if (savedQuery != null) {
                                     logger.fine("onLoad: broadcasting saved query " + JSON.stringify(savedQuery) );
-                                    $rootScope.$broadcast("$tmLoadSavedQuery", savedQuery);
+                                    MiscUtils.$broadcast("$tmLoadSavedQuery", savedQuery);
                                 } else {
                                     loadAllTrans();
                                 }
@@ -1366,12 +1381,14 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         }
     }
 
-
     onLoad();
 
     // Populate tags for auto-fill.
     Datastore.fetchTags()
              .then( function success(tags) { $scope.tags = tags; } ); 
+
+    // Listens for $tmAddTranTag events.
+    MiscUtils.listenForAddTranTag($scope, logger);
 
 }])
 
@@ -1491,19 +1508,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     MiscUtils.$on($scope, "$tmLoadSavedQuery", onLoadSavedQuery);
 
     /**
-     * Listens for $addTranTag events.
-     */
-    var onAddTranTag = function(theEvent, tag) {
-        logger.fine("onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
-
-        if ( ! _.contains($scope.tags, tag) ) {
-            $scope.tags.push(tag);
-        }
-    };
-
-    $scope.$on("$addTranTag", onAddTranTag );
-
-    /**
      * Export to scope.
      */
     $scope.addTag = addTag;
@@ -1585,6 +1589,9 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
     // Populate tags.
     Datastore.fetchTags()
              .then( function success(tags) { $scope.tags = tags; } ); 
+
+    // Listens for $tmAddTranTag events.
+    MiscUtils.listenForAddTranTag($scope, logger);
 
 }])
 

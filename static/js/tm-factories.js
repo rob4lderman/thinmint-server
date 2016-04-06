@@ -439,8 +439,8 @@ angular.module( "tmFactories", [] )
 /**
  * Mongo datastore.
  */
-.factory("Datastore", [ "$http", "Logger", "_", "$rootScope", "MiscUtils", 
-               function( $http,   Logger,   _,   $rootScope,   MiscUtils) {
+.factory("Datastore", [ "$http", "Logger", "_", 
+               function( $http,   Logger,   _ ) {
 
     var logger = Logger.getLogger("Datastore", { all: false });
 
@@ -484,9 +484,6 @@ angular.module( "tmFactories", [] )
         return $http.get( "/accounts/" + accountId)
                     .then( function success(response) {
                                logger.fine( "fetchAccount: /accounts/" + accountId + ": response=" + JSON.stringify(response));
-
-                               logger.fine("fetchAccount: $rootScope.$broadcast($tmAccountLoaded)");
-                               $rootScope.$broadcast( "$tmAccountLoaded", response.data );
                                return response.data;
                            }, 
                            function error(response) {
@@ -590,7 +587,6 @@ angular.module( "tmFactories", [] )
         return $http.post( "/query/accounts", postData )
                     .then( function success(response) {
                                logger.fine( "queryAccounts: response=" + JSON.stringify(response,null,2));
-                               MiscUtils.$broadcast( "$tmAccountsLoaded", response.data );
                                return response.data;
                            }, function error(response) {
                                logger.severe("queryAccounts: POST /query/accounts: response=" + JSON.stringify(response)); 
@@ -883,6 +879,8 @@ angular.module( "tmFactories", [] )
 
     /**
      * $rootScope.$broadcast(eventName, eventData), wrapped in a $timeout.
+     *
+     * @return eventData (so it can be included in a promise chain).
      */
     var $broadcast = function(eventName, eventData) {
         logger.info("$broadcast: eventName=" + eventName );
@@ -896,6 +894,8 @@ angular.module( "tmFactories", [] )
 
         // Keep track of the event for any late-loaded controllers (e.g. from a partial) that might be interested in it.
         firedEvents[eventName] = eventData;
+
+        return eventData;
     };
 
     /**
@@ -934,6 +934,28 @@ angular.module( "tmFactories", [] )
         }
     };
 
+    /**
+     * Listens for $tmAddTranTag events.
+     */
+    var onAddTranTag = function($scope, logger, theEvent, tag) {
+        logger.info("onAddTranTag: tag=" + tag + ", $scope.tags=" + JSON.stringify($scope.tags));
+
+        if ( ! _.contains($scope.tags, tag) ) {
+            $scope.tags.push(tag);
+        }
+    };
+
+    /**
+     * Setup a listener for $tmAddTranTag events on the given scope.
+     * The listener will add new tags to $scope.tags.
+     *
+     * Page controllers need to do this to maintain an updated list of tags
+     * as the user may add new tags while tagging trans.
+     */
+    var listenForAddTranTag = function($scope, logger) {
+        $scope.$on("$tmAddTranTag", _.partial( onAddTranTag, $scope, logger ) );
+    };
+
     return {
         currencyToNumber: currencyToNumber,
         sumField: sumField,
@@ -943,7 +965,8 @@ angular.module( "tmFactories", [] )
         isNothing: isNothing,
         "$on": $on,
         "$broadcast": $broadcast,
-        getDupEventChecker: getDupEventChecker
+        getDupEventChecker: getDupEventChecker,
+        listenForAddTranTag: listenForAddTranTag
     };
 }])
 
@@ -1049,7 +1072,8 @@ angular.module( "tmFactories", [] )
 
         // Get the context of the canvas element we want to select
         return new Chart(canvasElement.getContext("2d"))
-                     .Line(chartData, { responsive: true });
+                     .Line(chartData, { responsive: true,
+                                        scaleBeginAtZero: true });
     };
 
     /**
@@ -1254,7 +1278,7 @@ angular.module( "tmFactories", [] )
  * Usage:
  * <input ng-model="scopeField" tm-auto-fill="{fillStringList}" />
  *
- * {fillStringList} is the name of a scope field that contains the list of
+ * {fillStringList} is the name of a model that contains the list of
  * potential auto-fill strings.
  *
  * As the user types, the first string in fillStringList that begins with
@@ -1264,96 +1288,133 @@ angular.module( "tmFactories", [] )
 .directive('tmAutoFill', [ "_", "$parse", "Logger",
                    function(_,   $parse,   Logger) {
 
-    var logger = Logger.getLogger("tmAutoFill");
+    var logger = Logger.getLogger("tmAutoFill", {all:true});
 
-    var directiveDefiningObj = {
-        require: "ngModel",
-        link: function($scope, element, attrs, ngModel) {
+    /**
+     * @return true if the input element has selected text
+     */
+    var isTextSelected = function(element) {
+        return (element[0].selectionEnd > element[0].selectionStart);
+    }
 
-                  logger.fine("tmAutoFill.link: entry");
-
-                  /**
-                   *
-                   */
-                  var fillAndSelect = function( element, fillText ) {
-                        var typedTextLen = element.val().length;
-                        element.val( fillText );
-                        element[0].setSelectionRange( typedTextLen , fillText.length );
-                  };
-
-                  /**
-                   *
-                   */
-                  var autofill = function(element) {
-                      var fillStringList = $parse(attrs.tmAutoFill)($scope);
-
-                      logger.fine("tmAutoFill.autofill: element.val()=" + element.val()
-                                                    + ", fillStringList=" + JSON.stringify(fillStringList));
-
-                      var fillStrings = _.filter( fillStringList, function(fillString) { return fillString.startsWith( element.val() ); } );
-
-                      if (fillStrings.length > 0) {
-                          fillAndSelect( element, fillStrings[0] );
-                      }
-                  };
-
-                  /**
-                   *
-                   */
-                  element.on("input", function(event) {
-                      autofill( element );
-                  });
-
-                  /**
-                   * @return true if the input element has selected text
-                   */
-                  var isTextSelected = function(element) {
-                      return (element[0].selectionEnd > element[0].selectionStart);
-                  }
-
-                  var isBackspaceKey = function(keyEvent) {
-                      return keyEvent.which == 8;
-                  };
-
-                  var isDeleteKey = function(keyEvent) {
-                      return keyEvent.which == 46;
-                  };
-
-                  var isEnterKey = function(keyEvent) {
-                      return keyEvent.which == 13;
-                  };
-
-
-                  element.on("keydown", function(keyEvent) {
-                      logger.fine("directive::tnWatchInput.keydown: $scope.inputTag=" + $scope.inputTag 
-                                        + ", keyEvent.which=" + keyEvent.which
-                                        + ", element.val()=" + element.val()
-                                        + ", element.selectionStart=" + element[0].selectionStart
-                                        + ", element.selectionEnd=" + element[0].selectionEnd
-                                        );
-
-                      // Because angular doesn't update the scope with the filled in portion of the input
-                      if ( isEnterKey(keyEvent) ) {
-                          ngModel.$setViewValue( element.val() );
-                      }
-
-                      // Handle backspace and delete ourselves.  Otherwise "oninput" will be driven
-                      // and will re-autofill the input box.
-                      if ( isBackspaceKey(keyEvent) || isDeleteKey(keyEvent) ) {
-
-                          if ( isTextSelected(element) ) {
-                              element.val( element.val().substring(0, element[0].selectionStart ) )
-                          } else if (element.val().length > 0) {
-                              element.val( element.val().substring(0, element.val().length - 1) )
-                          }
-
-                          keyEvent.preventDefault();
-                      }
-
-                  });
-              }
+    /**
+     * @return true if keyEvent is for the BACKSPACE key
+     */
+    var isBackspaceKey = function(keyEvent) {
+        return keyEvent.which == 8;
     };
-    return directiveDefiningObj;
+
+    /**
+     * @return true if keyEvent is for the DELETE key
+     */
+    var isDeleteKey = function(keyEvent) {
+        return keyEvent.which == 46;
+    };
+
+    /**
+     * @return true if keyEvent is for the ENTER key
+     */
+    var isEnterKey = function(keyEvent) {
+        return keyEvent.which == 13;
+    };
+
+    /**
+     * Auto-complete the given DOM element val, then highlight/select the portion
+     * of the text that was filled in.
+     */
+    var fillAndSelect = function( element, fillText ) {
+          var typedTextLen = element.val().length;
+          element.val( fillText );
+          element[0].setSelectionRange( typedTextLen , fillText.length );
+    };
+
+    /**
+     * Get the list of potential auto-complete strings from the model specified
+     * by "tm-auto-fill", then fill in the input with the first string that matches
+     * the currently typed input.
+     */
+    var autofill = function($scope, element, attrs, ngModel) {
+        var fillStringList = $parse(attrs.tmAutoFill)($scope);
+
+        logger.fine("tmAutoFill.autofill: element.val()=" + element.val()
+                                      + ", fillStringList=" + JSON.stringify(fillStringList));
+
+        var fillStrings = _.filter( fillStringList, function(fillString) { return fillString.startsWith( element.val() ); } );
+
+        if (fillStrings.length > 0) {
+            fillAndSelect( element, fillStrings[0] );
+
+            // Notify angular that the view value changed.
+            ngModel.$setViewValue( element.val() );
+        }
+    };
+
+    /**
+     * Listens for keydown events.
+     *
+     * Special handling for enter, backspace, and delete keys.
+     */
+    var handleSpecialKeys = function( $scope, element, attrs, ngModel, keyEvent ) {
+        logger.fine("handleSpecialKeys: $scope.inputTag=" + $scope.inputTag 
+                          + ", keyEvent.which=" + keyEvent.which
+                          + ", element.val()=" + element.val()
+                          + ", element.selectionStart=" + element[0].selectionStart
+                          + ", element.selectionEnd=" + element[0].selectionEnd
+                          );
+
+        // Because angular doesn't update the scope with the filled in portion of the input
+        if ( isEnterKey(keyEvent) ) {
+            // Notify angular that the view value changed.
+            ngModel.$setViewValue( element.val() );
+        }
+
+        // Handle backspace and delete ourselves.  Otherwise "oninput" will be driven
+        // and will re-autofill the input box.
+        if ( isBackspaceKey(keyEvent) || isDeleteKey(keyEvent) ) {
+
+            if ( isTextSelected(element) ) {
+                element.val( element.val().substring(0, element[0].selectionStart ) )
+            } else if (element.val().length > 0) {
+                element.val( element.val().substring(0, element.val().length - 1) )
+            }
+
+            // Prevent event propagation. Otherwise "oninput" will be driven
+            // and will re-autofill the input box.
+            keyEvent.preventDefault();
+        }
+    };
+
+
+    /**
+     * ----------------------------------------------------------------------------
+     * The linkFn is called when the $scope is ready to be linked up with the 
+     * compiled template.
+     *
+     * @param $scope the parent $scope, unless you specified an isolate scope, in which case it's the isolate scope.
+     * @param element jqLite-wrapped DOM element.  Use element[0] to get the raw DOM element.
+     * @param attrs attributes of the DOM element  
+     *
+     * @return nothing
+     */
+    var linkFn = function($scope, element, attrs, ngModel) {
+
+        logger.fine("linkFn: entry");
+
+        /**
+         * autofill as the user types 
+         */
+        element.on("input", _.partial( autofill, $scope, element, attrs, ngModel ) );
+
+        /**
+         * Handle special keys
+         */
+        element.on("keydown", _.partial( handleSpecialKeys, $scope, element, attrs, ngModel ) );
+    };
+
+    return {
+        require: "ngModel",
+        link: linkFn
+    };
 }])
 
 /**
