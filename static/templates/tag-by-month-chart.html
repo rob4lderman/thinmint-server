@@ -1,4 +1,4 @@
-<div class="row">
+<div class="col-md-6">
     <!-- tag chart -->
     <div class="tm-portal" ng-controller="TagByMonthChartController">
         <h3><a href="" ng-click="tagOnClick()">Tag: {{tag}}</a></h3>
@@ -6,7 +6,7 @@
             <div class="tm-trans-canvas-thinking" > 
                 <img src="icons/thinking.gif" ng-if="isChartThinking"/>
             </div>
-            <canvas tm-chart-data="chartData" width="1000" height="250"></canvas>
+            <canvas tm-chart-data="chartData" width="500" height="250"></canvas>
         </div>
     </div>
 </div>

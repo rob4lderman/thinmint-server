@@ -696,13 +696,13 @@ angular.module( "tmFactories", [] )
      */
     var putTran = function(tranId, putData) {
 
-        logger.info("Datastore.putTran: tranId=" + tranId + ", putData=" + JSON.stringify(putData));
+        logger.info("putTran: tranId=" + tranId + ", putData=" + JSON.stringify(putData));
 
         return $http.put( "/transactions/" + tranId, putData )
                     .then( function success(response) {
-                               logger.fine( "Datastore.putTran: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "putTran: response=" + JSON.stringify(response,null,2));
                            }, function error(response) {
-                               logger.severe("Datastore.putTran: PUT /transactions/" + tranId + ": response=" + JSON.stringify(response)); 
+                               logger.severe("putTran: PUT /transactions/" + tranId + ": response=" + JSON.stringify(response)); 
                            } );
     };
 
@@ -746,12 +746,12 @@ angular.module( "tmFactories", [] )
      * @return promise
      */
     var saveQuery = function(savedQuery) {
-        logger.info("Datastore.saveQuery: savedQuery=" + JSON.stringify(savedQuery) );
+        logger.info("saveQuery: savedQuery=" + JSON.stringify(savedQuery) );
         return $http.post( "/savedqueries", savedQuery)
                     .then( function success(response) {
-                               logger.fine( "Datastore.saveQuery: response=" + JSON.stringify(response,null,2));
+                               logger.fine( "saveQuery: response=" + JSON.stringify(response,null,2));
                            }, function error(response) {
-                               logger.severe("Datastore.saveQuery: POST /savedqueries: postData=" + JSON.stringify(savedQuery)
+                               logger.severe("saveQuery: POST /savedqueries: postData=" + JSON.stringify(savedQuery)
                                                                       + "response=" + JSON.stringify(response)); 
                            } );
     };

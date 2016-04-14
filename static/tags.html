@@ -73,7 +73,9 @@
             </div>
         </div>
 
-        <div ng-repeat="tag in tags | orderBy" ng-include="'templates/tag-by-month-chart.html'">
+        <div class="row">
+            <div ng-repeat="tag in tags | orderBy" ng-include="'templates/tag-by-month-chart.html'">
+            </div>
         </div>
 
     </div>

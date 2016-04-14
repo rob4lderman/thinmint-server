@@ -379,7 +379,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
      * PUT the tag updates to the db.
      */
     var putTranTags = function() {
-        logger.info("TagFormController.putTranTags: " + JSON.stringify($scope.tran.tags));
+        logger.info("putTranTags: " + JSON.stringify($scope.tran.tags));
         var putData = { "tags": $scope.tran.tags } ;
         Datastore.putTran( $scope.tran._id, putData );
     };
@@ -407,7 +407,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
             // Refresh parent $scope.tags since we may have just added a brand new tag.
             // Safest way to do this is to via Event.
-            logger.info("TagFormController.addTranTag: $rootScope.$broadcast(event=$tmAddTranTag, tag=" + tag + ")");
+            logger.info("addTranTag: $rootScope.$broadcast(event=$tmAddTranTag, tag=" + tag + ")");
             $rootScope.$broadcast("$tmAddTranTag", tag);
         }
     }
@@ -417,7 +417,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
      * Add the tag to the tran.
      */
     var onFormSubmit = function() {
-        logger.info("TagFormController.onFormSubmit: " + $scope.inputTag);
+        logger.info("onFormSubmit: " + $scope.inputTag);
         addTranTag( $scope.inputTag )
     }
 
@@ -428,7 +428,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
         // remove it from the tags list 
         $scope.tran.tags = _.filter( $scope.tran.tags, function(t) { return t != tag; } );
-        logger.info("TagFormController.removeTag: " + tag + ", $scope.tran.tags=" + JSON.stringify($scope.tran.tags) );
+        logger.info("removeTag: " + tag + ", $scope.tran.tags=" + JSON.stringify($scope.tran.tags) );
 
         // Update the db
         putTranTags();
@@ -1096,7 +1096,6 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
      */
     var onTranQueryUpdated = function(theEvent, query) {
         logger.info("onTranQueryUpdated: query=" + JSON.stringify(query));
-        $scope.isChartThinking = true;
 
         if ( _.isEqual( currentQuery, query ) ) {
             logger.info("onTranQueryUpdated: currentQuery same as updated query. Will not update."
@@ -1105,6 +1104,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
             return;
         }
 
+        $scope.isChartThinking = true;
         currentQuery = query;
 
         fetchTranAmountsAndTags( _.extend( {}, query) )

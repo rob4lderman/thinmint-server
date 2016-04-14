@@ -10,10 +10,8 @@ done: allow new accounts
       2. update all the code.
       
 
-TODO: backfill time-series during batch update
-      - normally it'll just overwrite what's already there
-      - if historic tran data was updated, it'll update the time series properly
-      - if account is new, it'll backfill its time-series
+TODO: isChartWaiting on tags page.
+TODO: set min of 6mo history for tag charts
 
 TODO: guest user with sample data
 TODO: when adding new user, need to create indexes:
@@ -30,12 +28,9 @@ TODO: tag-by-month projections (based on tag-by-month trends)?
 done: "untagged" bars
 
 
-TODO: Datastore shouldn't emit events.  Callers should emit events.
-
-
 TODO: include trxType=0|1 in tran query form.
 
-TODO: trans page: don't immediately download ALL transactions. make the user ask for them (by clicking "Run" with an empty form).
+TODO: trans page: don't immediately download ALL transactions. make the user ask for them (by clicking "Transactions" header).
 
 TODO: add tran query form to accounts page.
 
