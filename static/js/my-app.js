@@ -1989,7 +1989,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
      */
     var fetchThisMonthTags = function() {
         var query = { "yearMonth": DateUtils.formatYearMonth( new Date() ),
-                      "tag": { "$nin": [ "bills", "income" ] } 
+                      "tag": { "$nin": [ "bills", "income", "transfer" ] } 
                     } ;
         var options = { "sort": { "sumAmountValue": 1 } };
 
@@ -2010,7 +2010,7 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
         d.setMonth( d.getMonth() - 1 );     // rewind 1 month
 
         var query = { "yearMonth": DateUtils.formatYearMonth( d ),
-                      "tag": { "$nin": [ "bills", "income" ] } 
+                      "tag": { "$nin": [ "bills", "income", "transfer" ] } 
                     };
         var options = { "sort": { "sumAmountValue": 1 } };
 
