@@ -41,6 +41,10 @@
     <script src="//ajax.googleapis.com/ajax/libs/angular_material/1.0.5/angular-material.min.js"></script>
     <!-- script src="js/angular-material.min.js"></script -->
 
+    <!-- Chart.js -->
+    <script src="//cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script>
+    <!-- script src="js/Chart.js"></script -->
+
 </head>
 
 <body>
@@ -149,6 +153,34 @@
                 </div>
             </div>
         </div>
+
+        <div ng-controller="ThisMonthByTagController">
+            <div class="row">
+                <div class="tm-portal">
+                    <h3>Spending This Month, By Tag (excluding bills, income)</h3>
+                    <div class="text-center">
+                        <div class="tm-trans-canvas-thinking" > 
+                            <img src="icons/thinking.gif" ng-if="isThisMonthChartThinking"/>
+                        </div>
+                        <canvas tm-chart-data="thisMonthChartData" width="1000" height="350"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="tm-portal">
+                    <h3>Spending Last Month, By Tag (excluding bills, income)</h3>
+                    <div class="text-center">
+                        <div class="tm-trans-canvas-thinking" > 
+                            <img src="icons/thinking.gif" ng-if="isLastMonthChartThinking"/>
+                        </div>
+                        <canvas tm-chart-data="lastMonthChartData" width="1000" height="350"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
 
     </div>
     <div id="tm-page-footer" class="container-fluid">

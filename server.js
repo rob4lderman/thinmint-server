@@ -516,9 +516,9 @@ app.get('/savedqueries/:id',
  * REST API
  *
  * curl -X POST \
- *   -d '{ "query": { "account": "SAVINGS" }, "options": { "fields": { "account": 1, "date": 1, "amount": 1, "category": 1, "omerchant": 1, "isDebit": 1 } } }' \
+ *   -d '{ "query": { "tag": "bills" } }' \
  *   -H 'content-type:application/json'  \
- *   http://localhost:8081/query/transactions
+ *   http://localhost:8081/query/tagsbymonth
  *
  */
 app.post('/query/tagsbymonth', 

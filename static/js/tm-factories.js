@@ -757,6 +757,14 @@ angular.module( "tmFactories", [] )
     };
 
     /**
+     *  Note: tagsByMonth records look like this:
+     *  {
+     *      "_id" : "security-2015.12",
+     *      "yearMonth" : "2015.12",
+     *      "countTrans" : 1,
+     *      "tag" : "security",
+     *      "sumAmountValue" : 1635
+     *  }
      * @return promise that is satified with tagsByMonth records
      */
     var queryTagsByMonth = function( postData ) {
@@ -1251,7 +1259,13 @@ angular.module( "tmFactories", [] )
         
         return new Date(yearMonthInts[1] + "/" + yearMonthInts[2] + "/01");
     };
-        
+
+    /**
+     * @return the given date formatted as "yyyy.mm"
+     */
+    var formatYearMonth = function(d) {
+        return dateFilter(d, "yyyy.MM");
+    };
 
     return {
         createDateLabels: createDateLabels,
@@ -1259,7 +1273,8 @@ angular.module( "tmFactories", [] )
         formatMonthLabel: formatMonthLabel,
         formatEpochAsDate: formatEpochAsDate,
         parseYearMonthString: parseYearMonthString,
-        dateDiff: dateDiff
+        dateDiff: dateDiff,
+        formatYearMonth: formatYearMonth
     };
 }])
 

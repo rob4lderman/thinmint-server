@@ -1888,7 +1888,161 @@ angular.module( "MyApp",  ['puElasticInput', 'ngMaterial', 'tmFactories' ] )
 
 }])
 
+/**
+ * This month and last month's spending chart, by tag. 
+ */
+.controller( "ThisMonthByTagController",   ["$scope", "_", "Logger", "DateUtils", "Datastore", "ChartUtils", "MiscUtils", 
+                                   function( $scope,   _ ,  Logger,   DateUtils,   Datastore,   ChartUtils,   MiscUtils ) {
 
+    var logger = Logger.getLogger("ThisMonthByTagController", {all:false});
+    logger.info("alive!");
+
+    /**
+     * @param tagsByMonthList - tagsByMonth records.  expected to be for a single yearMonth only.
+     *
+     * @return a chart dataset for the tagsByMonthList data 
+     */
+    var buildTagsByMonthDataset = function( tagsByMonthList ) {
+
+        logger.fine("buildTagsByMonthDataset: tagsByMonthList=" + JSON.stringify(tagsByMonthList) );
+
+        // Step 1. Get the chart values
+        var pluckValues =  _.pluck( tagsByMonthList, "sumAmountValue");
+
+        // Step 2. Create the positive/negative bar colors.
+        var barColors = ChartUtils.createBarColors( pluckValues );    // red and green bar colors
+
+        // Step 3. Create the actual abs values for the chart.
+        var absPluckValues = _.map( pluckValues, function(val) { return Math.abs(val); } );   // absolute values
+
+        logger.fine("buildTagsByMonthDataset: absPluckValues=" + JSON.stringify(absPluckValues));
+
+        // Step 5. Build and return dataset.
+        return {
+                    label: "Tags By Month",
+                    fillColor: "rgba(220,220,220,0.2)",
+                    strokeColor: "rgba(220,220,220,1)",
+                    pointColor: "rgba(220,220,220,1)",
+                    pointStrokeColor: "#fff",
+                    pointHighlightFill: "#fff",
+                    pointHighlightStroke: "rgba(220,220,220,1)",
+                    data: absPluckValues,
+                    tm: { 
+                        barColors: barColors
+                    }
+                };
+    };
+
+    /**
+     * Render the tagsByMonth data .
+     *
+     * @param tagsByMonthList, expected to be in sumAmountValue order ascending 
+     *
+     * @return chartData
+     */
+    var buildChartData = function( tagsByMonthList ) {
+
+        logger.fine("buildChartData: entry");
+
+        if (tagsByMonthList.length == 0) {
+            $scope.chartData = {};
+            return;
+        }
+
+        // Step 1. Get the labels.
+        var tagLabels = _.pluck( tagsByMonthList, "tag" ) ;
+
+        // Step 2. Map records into datasets.
+        var chartDataset = buildTagsByMonthDataset( tagsByMonthList );
+
+        // Step 3. Setup data frame.
+        var chartData = {
+            labels: tagLabels,
+            datasets: [ chartDataset ]
+        };
+
+        logger.fine("buildChartData: chartData=" + JSON.stringify(chartData) );
+
+        return chartData;
+    };
+
+    /**
+     * Set $scope.thisMonthChartData, which triggers the tm-chart-data directive 
+     * to render the chart.
+     */
+    var setThisMonthChartData = function(chartData) {
+        $scope.isThisMonthChartThinking = false;
+        $scope.thisMonthChartData = chartData;
+    };
+
+    /**
+     * Set $scope.lastMonthChartData, which triggers the tm-chart-data directive 
+     * to render the chart.
+     */
+    var setLastMonthChartData = function(chartData) {
+        $scope.isLastMonthChartThinking = false;
+        $scope.lastMonthChartData = chartData;
+    };
+
+    /**
+     * Fetch tagsByMOnth data for this month
+     */
+    var fetchThisMonthTags = function() {
+        var query = { "yearMonth": DateUtils.formatYearMonth( new Date() ),
+                      "tag": { "$nin": [ "bills", "income" ] } 
+                    } ;
+        var options = { "sort": { "sumAmountValue": 1 } };
+
+        $scope.isThisMonthChartThinking = true;
+
+        // Fetch the tag-by-month data
+        Datastore.queryTagsByMonth( { query: query, options: options } )
+                 .then( buildChartData )
+                 .then( setThisMonthChartData );
+    };
+
+    /**
+     * Fetch tagsByMOnth data for last month
+     */
+    var fetchLastMonthTags = function() {
+
+        var d = new Date();
+        d.setMonth( d.getMonth() - 1 );     // rewind 1 month
+
+        var query = { "yearMonth": DateUtils.formatYearMonth( d ),
+                      "tag": { "$nin": [ "bills", "income" ] } 
+                    };
+        var options = { "sort": { "sumAmountValue": 1 } };
+
+        $scope.isLastMonthChartThinking = true;
+
+        // Fetch the tag-by-month data
+        Datastore.queryTagsByMonth( { query: query, options: options } )
+                 .then( buildChartData )
+                 .then( setLastMonthChartData );
+    };
+
+    /**
+     * Load the tags-by-month data for this yearMonth.
+     */
+    var onLoad = function() {
+
+        fetchThisMonthTags();
+        fetchLastMonthTags();
+    };
+
+    /**
+     * init.
+     */
+    $scope.isThisMonthChartThinking = false;
+    $scope.isLastMonthChartThinking = false;
+
+    /**
+     * Kick things off.
+     */
+    onLoad();
+
+}])
 
 ;
 
